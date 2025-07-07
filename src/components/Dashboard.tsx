@@ -1,130 +1,258 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Check, Star, Users } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Calendar, Check, Star, Users, PlayCircle, Clock, Target } from "lucide-react";
 
-// Mock data - would come from Supabase in real app
-const MOCK_USER = {
-  name: "Alex",
-  productType: "SaaS",
-  goal: "Get 100 signups",
-  streak: 7,
-  tasksThisWeek: 12,
-  completedThisWeek: 8
-};
+interface Profile {
+  id: string;
+  user_id: string;
+  product_name: string;
+  product_type: string;
+  goal: string;
+  platforms: string[];
+  current_streak: number;
+  last_activity_date: string;
+  website_analysis: any;
+}
 
-const MOCK_TASKS = [
-  {
-    id: 1,
-    title: "Write 3 SEO-optimized blog posts",
-    category: "SEO",
-    completed: false,
-    priority: "high",
-    estimatedTime: "2 hours"
-  },
-  {
-    id: 2,
-    title: "Submit to 5 SaaS directories",
-    category: "Directories",
-    completed: true,
-    priority: "medium",
-    estimatedTime: "1 hour"
-  },
-  {
-    id: 3,
-    title: "Send 20 cold emails to potential customers",
-    category: "Cold Email",
-    completed: false,
-    priority: "high",
-    estimatedTime: "45 minutes"
-  },
-  {
-    id: 4,
-    title: "Post 2 LinkedIn articles about your niche",
-    category: "LinkedIn",
-    completed: false,
-    priority: "medium",
-    estimatedTime: "1.5 hours"
-  },
-  {
-    id: 5,
-    title: "Create 5 TikTok videos showcasing product",
-    category: "TikTok",
-    completed: true,
-    priority: "low",
-    estimatedTime: "3 hours"
-  }
-];
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: string;
+  estimated_time: string;
+  completed: boolean;
+  completed_at: string | null;
+  user_approach: string | null;
+  result_notes: string | null;
+  ai_suggestion: string | null;
+  week_start_date: string;
+}
 
-const STRATEGIES = [
-  {
-    id: "seo",
-    name: "SEO Strategy",
-    description: "Long-term, compounding growth through organic traffic",
-    color: "bg-blue-500"
-  },
-  {
-    id: "social_video",
-    name: "Social Video",
-    description: "Virality and awareness through short-form video",
-    color: "bg-pink-500"
-  },
-  {
-    id: "cold_email",
-    name: "Cold Email",
-    description: "Direct outbound lead generation",
-    color: "bg-green-500"
-  },
-  {
-    id: "directories",
-    name: "Directories",
-    description: "Credibility and discoverability",
-    color: "bg-purple-500"
-  }
-];
+interface WeeklyStat {
+  platform: string;
+  posts_count: number;
+  target_count: number;
+}
 
 export default function Dashboard() {
-  const [tasks, setTasks] = useState(MOCK_TASKS);
-  const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState<WeeklyStat[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskApproach, setTaskApproach] = useState("");
+  const [taskResult, setTaskResult] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const toggleTask = (taskId: number) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId 
-        ? { ...task, completed: !task.completed }
-        : task
-    ));
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      // Load profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profileData) {
+        navigate("/onboarding");
+        return;
+      }
+
+      setProfile(profileData);
+
+      // Load current week's tasks
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekStartStr = weekStart.toISOString().split('T')[0];
+
+      const { data: tasksData } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('week_start_date', weekStartStr)
+        .order('created_at');
+
+      setTasks(tasksData || []);
+
+      // Load weekly stats
+      const { data: statsData } = await supabase
+        .from('weekly_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('week_start_date', weekStartStr);
+
+      setWeeklyStats(statsData || []);
+
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const toggleTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          completed: !task.completed,
+          completed_at: !task.completed ? new Date().toISOString() : null
+        })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      setTasks(tasks.map(t => 
+        t.id === taskId 
+          ? { 
+              ...t, 
+              completed: !t.completed,
+              completed_at: !t.completed ? new Date().toISOString() : null
+            }
+          : t
+      ));
+
+      // Update streak if completing a task
+      if (!task.completed && profile) {
+        const today = new Date().toISOString().split('T')[0];
+        if (profile.last_activity_date !== today) {
+          const newStreak = profile.current_streak + 1;
+          await supabase
+            .from('profiles')
+            .update({
+              current_streak: newStreak,
+              last_activity_date: today
+            })
+            .eq('user_id', profile.user_id);
+
+          setProfile({ ...profile, current_streak: newStreak, last_activity_date: today });
+        }
+      }
+
+      toast({
+        title: task.completed ? "Task unmarked" : "Task completed! 🎉",
+        description: task.completed ? "Task marked as incomplete" : "Great job! Keep up the streak!",
+      });
+
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update task",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const saveTaskDetails = async () => {
+    if (!selectedTask) return;
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          user_approach: taskApproach,
+          result_notes: taskResult
+        })
+        .eq('id', selectedTask.id);
+
+      if (error) throw error;
+
+      setTasks(tasks.map(t => 
+        t.id === selectedTask.id 
+          ? { ...t, user_approach: taskApproach, result_notes: taskResult }
+          : t
+      ));
+
+      setSelectedTask(null);
+      setTaskApproach("");
+      setTaskResult("");
+
+      toast({
+        title: "Task details saved!",
+        description: "Your approach and results have been recorded",
+      });
+
+    } catch (error) {
+      console.error('Error saving task details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save task details",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-2xl font-black uppercase">LOADING...</div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return null;
+  }
+
   const completedTasks = tasks.filter(t => t.completed).length;
-  const weekProgress = (MOCK_USER.completedThisWeek / MOCK_USER.tasksThisWeek) * 100;
+  const weekProgress = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
+  const pendingTasks = tasks.filter(t => !t.completed);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm">
+      <header className="border-b-4 border-foreground bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-primary rounded-xl">
-                <span className="text-lg font-bold text-primary-foreground">MB</span>
+              <div className="flex items-center justify-center w-12 h-12 bg-primary border-4 border-foreground shadow-brutal-small">
+                <span className="text-lg font-black text-primary-foreground">MB</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold">Good morning, {MOCK_USER.name}! 👋</h1>
-                <p className="text-sm text-muted-foreground">
-                  {MOCK_USER.streak} day streak • {MOCK_USER.goal}
+                <h1 className="text-2xl font-black uppercase">Good morning! 👋</h1>
+                <p className="text-sm font-bold uppercase tracking-wide">
+                  {profile.current_streak} day streak • {profile.goal}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="font-black uppercase">
                 <Calendar className="w-4 h-4 mr-2" />
                 Week View
               </Button>
-              <Button variant="hero" size="sm" asChild>
+              <Button variant="hero" size="sm" asChild className="font-black uppercase">
                 <a href="/strategies">Strategy Library</a>
               </Button>
             </div>
@@ -138,94 +266,182 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-8">
             {/* Progress Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-gradient-card border-0 shadow-soft">
+              <Card className="bg-primary/10 border-4 border-foreground shadow-brutal">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <div className="w-2 h-2 bg-success rounded-full animate-pulse-glow"></div>
+                  <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
+                    <div className="w-3 h-3 bg-success border-2 border-foreground animate-pulse"></div>
                     Current Streak
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{MOCK_USER.streak} days</div>
-                  <p className="text-sm text-muted-foreground">Keep it going!</p>
+                  <div className="text-3xl font-black">{profile.current_streak} DAYS</div>
+                  <p className="text-sm font-bold uppercase">Keep it going!</p>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-card border-0 shadow-soft">
+              <Card className="bg-secondary/10 border-4 border-foreground shadow-brutal">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Week Progress</CardTitle>
+                  <CardTitle className="text-sm font-black uppercase">Week Progress</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{MOCK_USER.completedThisWeek}/{MOCK_USER.tasksThisWeek}</div>
-                  <Progress value={weekProgress} className="mt-2" />
-                  <p className="text-sm text-muted-foreground mt-1">{Math.round(weekProgress)}% complete</p>
+                  <div className="text-3xl font-black">{completedTasks}/{tasks.length}</div>
+                  <Progress value={weekProgress} className="mt-2 h-3 border-2 border-foreground" />
+                  <p className="text-sm font-bold uppercase mt-1">{Math.round(weekProgress)}% complete</p>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-card border-0 shadow-soft">
+              <Card className="bg-accent/10 border-4 border-foreground shadow-brutal">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Today's Focus</CardTitle>
+                  <CardTitle className="text-sm font-black uppercase">Today's Focus</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{tasks.filter(t => !t.completed).length}</div>
-                  <p className="text-sm text-muted-foreground">tasks remaining</p>
+                  <div className="text-3xl font-black">{pendingTasks.length}</div>
+                  <p className="text-sm font-bold uppercase">tasks remaining</p>
                 </CardContent>
               </Card>
             </div>
 
             {/* Tasks */}
-            <Card className="bg-gradient-card border-0 shadow-soft">
+            <Card className="border-4 border-foreground shadow-brutal">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex items-center justify-between text-xl font-black uppercase">
                   This Week's Tasks
-                  <Badge variant="secondary">{completedTasks}/{tasks.length} completed</Badge>
+                  <Badge variant="outline" className="border-2 border-foreground font-black">
+                    {completedTasks}/{tasks.length} COMPLETED
+                  </Badge>
                 </CardTitle>
-                <CardDescription>
-                  Tailored marketing tasks for your {MOCK_USER.productType}
+                <CardDescription className="font-bold uppercase tracking-wide">
+                  Tailored marketing tasks for your {profile.product_type}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="all" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="all">All</TabsTrigger>
-                    <TabsTrigger value="pending">Pending</TabsTrigger>
-                    <TabsTrigger value="completed">Completed</TabsTrigger>
-                    <TabsTrigger value="high">High Priority</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-4 border-2 border-foreground">
+                    <TabsTrigger value="all" className="font-black uppercase">All</TabsTrigger>
+                    <TabsTrigger value="pending" className="font-black uppercase">Pending</TabsTrigger>
+                    <TabsTrigger value="completed" className="font-black uppercase">Completed</TabsTrigger>
+                    <TabsTrigger value="high" className="font-black uppercase">High Priority</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="all" className="space-y-4 mt-6">
                     {tasks.map((task) => (
                       <div 
                         key={task.id}
-                        className="flex items-start gap-4 p-4 rounded-lg border bg-card hover:shadow-soft transition-all duration-200"
+                        className="flex items-start gap-4 p-4 border-4 border-foreground bg-card shadow-brutal-small hover:shadow-brutal transition-all duration-150"
                       >
                         <Checkbox
                           checked={task.completed}
                           onCheckedChange={() => toggleTask(task.id)}
-                          className="mt-1"
+                          className="mt-1 border-2 border-foreground"
                         />
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className={`font-medium ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                            <h4 className={`font-black text-base ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                               {task.title}
                             </h4>
                             <Badge 
                               variant={task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'default' : 'secondary'}
-                              className="text-xs"
+                              className="text-xs font-black uppercase border-2 border-foreground"
                             >
                               {task.priority}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-4 text-sm font-bold">
                             <span className="flex items-center gap-1">
-                              <span className="w-2 h-2 bg-primary rounded-full"></span>
+                              <span className="w-2 h-2 bg-primary border border-foreground"></span>
                               {task.category}
                             </span>
-                            <span>{task.estimatedTime}</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {task.estimated_time}
+                            </span>
                           </div>
+                          {task.ai_suggestion && (
+                            <p className="text-sm mt-2 p-2 bg-muted border-2 border-foreground font-medium">
+                              💡 {task.ai_suggestion}
+                            </p>
+                          )}
                         </div>
-                        <Button variant="ghost" size="sm">
-                          View Guide
+                        <Button 
+                          variant="hero" 
+                          size="sm"
+                          className="font-black uppercase"
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setTaskApproach(task.user_approach || "");
+                            setTaskResult(task.result_notes || "");
+                          }}
+                        >
+                          <PlayCircle className="w-4 h-4 mr-2" />
+                          START TASK
+                        </Button>
+                      </div>
+                    ))}
+                  </TabsContent>
+
+                  <TabsContent value="pending" className="space-y-4 mt-6">
+                    {pendingTasks.map((task) => (
+                      <div 
+                        key={task.id}
+                        className="flex items-start gap-4 p-4 border-4 border-foreground bg-card shadow-brutal-small"
+                      >
+                        {/* Same structure as above but filtered */}
+                        <Checkbox
+                          checked={task.completed}
+                          onCheckedChange={() => toggleTask(task.id)}
+                          className="mt-1 border-2 border-foreground"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-black text-base">{task.title}</h4>
+                          <p className="text-sm font-medium mt-1">{task.description}</p>
+                        </div>
+                        <Button 
+                          variant="hero" 
+                          size="sm"
+                          className="font-black uppercase"
+                          onClick={() => setSelectedTask(task)}
+                        >
+                          START
+                        </Button>
+                      </div>
+                    ))}
+                  </TabsContent>
+
+                  <TabsContent value="completed" className="space-y-4 mt-6">
+                    {tasks.filter(t => t.completed).map((task) => (
+                      <div 
+                        key={task.id}
+                        className="flex items-start gap-4 p-4 border-4 border-foreground bg-success/10 shadow-brutal-small"
+                      >
+                        <Check className="w-5 h-5 text-success mt-1" />
+                        <div className="flex-1">
+                          <h4 className="font-black text-base line-through">{task.title}</h4>
+                          {task.result_notes && (
+                            <p className="text-sm font-medium mt-1 text-success">✅ {task.result_notes}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </TabsContent>
+
+                  <TabsContent value="high" className="space-y-4 mt-6">
+                    {tasks.filter(t => t.priority === 'high').map((task) => (
+                      <div 
+                        key={task.id}
+                        className="flex items-start gap-4 p-4 border-4 border-destructive bg-destructive/10 shadow-brutal-small"
+                      >
+                        <Target className="w-5 h-5 text-destructive mt-1" />
+                        <div className="flex-1">
+                          <h4 className="font-black text-base">{task.title}</h4>
+                          <p className="text-sm font-medium mt-1">{task.description}</p>
+                        </div>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          className="font-black uppercase"
+                          onClick={() => setSelectedTask(task)}
+                        >
+                          HIGH PRIORITY
                         </Button>
                       </div>
                     ))}
@@ -238,66 +454,68 @@ export default function Dashboard() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Actions */}
-            <Card className="bg-gradient-card border-0 shadow-soft">
+            <Card className="border-4 border-foreground shadow-brutal">
               <CardHeader>
-                <CardTitle className="text-lg">Quick Actions</CardTitle>
+                <CardTitle className="text-lg font-black uppercase">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="hero" className="w-full justify-start" asChild>
+                <Button variant="hero" className="w-full justify-start font-black uppercase" asChild>
                   <a href="/experiments">
                     <Star className="w-4 h-4 mr-2" />
                     Start Experiment
                   </a>
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start font-black uppercase">
                   <Users className="w-4 h-4 mr-2" />
                   View Analytics
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start font-black uppercase">
                   <Check className="w-4 h-4 mr-2" />
                   Weekly Recap
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Active Strategies */}
-            <Card className="bg-gradient-card border-0 shadow-soft">
+            {/* Weekly Stats */}
+            <Card className="border-4 border-foreground shadow-brutal">
               <CardHeader>
-                <CardTitle className="text-lg">Active Strategies</CardTitle>
-                <CardDescription>
-                  Based on your {MOCK_USER.productType} and goals
+                <CardTitle className="text-lg font-black uppercase">This Week's Activity</CardTitle>
+                <CardDescription className="font-bold uppercase tracking-wide">
+                  Your posting frequency
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {STRATEGIES.map((strategy) => (
-                  <div 
-                    key={strategy.id}
-                    className="p-3 rounded-lg border bg-card hover:shadow-soft transition-all duration-200 cursor-pointer"
-                    onClick={() => setSelectedStrategy(strategy.id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${strategy.color}`}></div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{strategy.name}</h4>
-                        <p className="text-xs text-muted-foreground">{strategy.description}</p>
-                      </div>
+                {weeklyStats.length > 0 ? (
+                  weeklyStats.map((stat) => (
+                    <div 
+                      key={stat.platform}
+                      className="flex items-center justify-between p-3 border-2 border-foreground bg-background"
+                    >
+                      <span className="font-black uppercase">{stat.platform}</span>
+                      <Badge className="font-black">
+                        {stat.posts_count}/{stat.target_count}
+                      </Badge>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm font-medium text-center p-4 border-2 border-foreground">
+                    Complete tasks to track your activity!
+                  </p>
+                )}
               </CardContent>
             </Card>
 
-            {/* Weekly Streak */}
-            <Card className="bg-gradient-success border-0 shadow-soft text-success-foreground">
+            {/* Streak Motivation */}
+            <Card className="bg-success/20 border-4 border-success shadow-brutal text-success-foreground">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <div className="w-2 h-2 bg-success-foreground rounded-full"></div>
+                <CardTitle className="text-lg font-black uppercase flex items-center gap-2">
+                  <div className="w-3 h-3 bg-success border border-foreground"></div>
                   Amazing Progress!
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm opacity-90">
-                  You've completed {MOCK_USER.completedThisWeek} tasks this week. 
+                <p className="text-sm font-bold">
+                  You've completed {completedTasks} tasks this week. 
                   You're building a solid marketing habit! 🚀
                 </p>
               </CardContent>
@@ -305,6 +523,77 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Task Details Modal */}
+      {selectedTask && (
+        <div className="fixed inset-0 bg-background/80 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-2xl border-4 border-foreground shadow-brutal-hover">
+            <CardHeader>
+              <CardTitle className="text-xl font-black uppercase">
+                START TASK: {selectedTask.title}
+              </CardTitle>
+              <CardDescription className="font-bold">
+                {selectedTask.description}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {selectedTask.ai_suggestion && (
+                <div className="p-4 bg-primary/10 border-4 border-foreground">
+                  <h4 className="font-black uppercase mb-2">AI Suggestion:</h4>
+                  <p className="font-medium">{selectedTask.ai_suggestion}</p>
+                </div>
+              )}
+              
+              <div>
+                <Label className="font-black uppercase">Your Approach:</Label>
+                <Textarea
+                  placeholder="Describe how you plan to complete this task..."
+                  value={taskApproach}
+                  onChange={(e) => setTaskApproach(e.target.value)}
+                  className="border-4 border-foreground font-medium mt-2"
+                />
+              </div>
+
+              <div>
+                <Label className="font-black uppercase">Results & Notes:</Label>
+                <Textarea
+                  placeholder="What were the results? What did you learn?"
+                  value={taskResult}
+                  onChange={(e) => setTaskResult(e.target.value)}
+                  className="border-4 border-foreground font-medium mt-2"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSelectedTask(null)}
+                  className="font-black uppercase"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="hero" 
+                  onClick={saveTaskDetails}
+                  className="font-black uppercase flex-1"
+                >
+                  Save Details
+                </Button>
+                <Button 
+                  variant="success" 
+                  onClick={() => {
+                    toggleTask(selectedTask.id);
+                    saveTaskDetails();
+                  }}
+                  className="font-black uppercase"
+                >
+                  Mark Complete
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
