@@ -4,24 +4,81 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { Mail } from "lucide-react";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent, isSignUp: boolean) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // TODO: Implement Supabase auth
-    console.log(isSignUp ? "Sign up" : "Sign in", { email, password });
-    
-    setTimeout(() => {
+    try {
+      const { data, error } = isSignUp 
+        ? await supabase.auth.signUp({ email, password })
+        : await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) throw error;
+
+      if (isSignUp && data.user && !data.session) {
+        toast({
+          title: "Check your email!",
+          description: "We sent you a confirmation link to complete your signup.",
+        });
+      } else if (data.session) {
+        toast({
+          title: "Welcome back!",
+          description: "Successfully signed in.",
+        });
+        
+        // Check if user has completed onboarding
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('product_name')
+          .eq('user_id', data.user.id)
+          .single();
+        
+        navigate(profile?.product_name ? '/dashboard' : '/onboarding');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Authentication failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-      // Simulate redirect to onboarding or dashboard
-      window.location.href = "/onboarding";
-    }, 1000);
+    }
+  };
+
+  const handleGoogleAuth = async (isSignUp: boolean) => {
+    setGoogleLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/onboarding`
+        }
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: "Google authentication failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -85,6 +142,26 @@ export default function Auth() {
                     {isLoading ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
+                
+                <div className="mt-4 text-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-4 flex items-center gap-2"
+                    onClick={() => handleGoogleAuth(false)}
+                    disabled={googleLoading}
+                  >
+                    <Mail className="w-4 h-4" />
+                    {googleLoading ? "Signing in..." : "Sign in with Google"}
+                  </Button>
+                </div>
               </TabsContent>
               
               <TabsContent value="signup">
@@ -119,22 +196,28 @@ export default function Auth() {
                     {isLoading ? "Creating account..." : "Create Account"}
                   </Button>
                 </form>
+                
+                <div className="mt-4 text-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-4 flex items-center gap-2"
+                    onClick={() => handleGoogleAuth(true)}
+                    disabled={googleLoading}
+                  >
+                    <Mail className="w-4 h-4" />
+                    {googleLoading ? "Creating account..." : "Sign up with Google"}
+                  </Button>
+                </div>
               </TabsContent>
             </Tabs>
-            
-            <div className="mt-6 text-center">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-                </div>
-              </div>
-              <Button variant="outline" className="w-full mt-4">
-                Continue with Google
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>

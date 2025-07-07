@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -42,8 +42,63 @@ export default function Onboarding() {
     websiteAnalysis: null as any
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Load form data from localStorage on component mount
+  useEffect(() => {
+    const savedFormData = localStorage.getItem('onboarding-form-data');
+    const savedStep = localStorage.getItem('onboarding-step');
+    
+    if (savedFormData) {
+      try {
+        const parsedData = JSON.parse(savedFormData);
+        setFormData(parsedData);
+      } catch (error) {
+        console.error('Error parsing saved form data:', error);
+      }
+    }
+    
+    if (savedStep) {
+      setStep(parseInt(savedStep, 10));
+    }
+  }, []);
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('onboarding-form-data', JSON.stringify(formData));
+  }, [formData]);
+
+  // Save current step to localStorage
+  useEffect(() => {
+    localStorage.setItem('onboarding-step', step.toString());
+  }, [step]);
+
+  // Check authentication on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { user: currentUser }, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error('Auth error:', error);
+          toast({
+            title: "Authentication Required",
+            description: "Please sign in to continue with onboarding.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+          return;
+        }
+        setUser(currentUser);
+      } catch (error) {
+        console.error('Error checking auth:', error);
+        navigate('/auth');
+      }
+    };
+    
+    checkAuth();
+  }, [navigate, toast]);
 
   const progress = (step / 4) * 100;
 
@@ -63,22 +118,23 @@ export default function Onboarding() {
     setIsLoading(true);
     
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
+      // Use the user state we're already tracking
+      if (!user) {
         toast({
-          title: "Error",
-          description: "User not authenticated",
+          title: "Authentication Required",
+          description: "Please sign in to complete onboarding.",
           variant: "destructive",
         });
+        navigate('/auth');
         return;
       }
 
-      // Save profile data
+      // Save profile data - use upsert with onConflict to handle existing profiles
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          user_id: user.data.user.id,
-          email: user.data.user.email,
+          user_id: user.id,
+          email: user.email,
           website_url: formData.websiteUrl,
           product_name: formData.productName,
           product_type: formData.productType,
@@ -87,6 +143,8 @@ export default function Onboarding() {
           website_analysis: formData.websiteAnalysis,
           current_streak: 0,
           last_activity_date: new Date().toISOString().split('T')[0]
+        }, {
+          onConflict: 'user_id'
         });
 
       if (profileError) throw profileError;
@@ -106,7 +164,7 @@ export default function Onboarding() {
           if (strategyData?.success) {
             // Save strategies
             const strategies = strategyData.strategy.strategies.map((s: any) => ({
-              user_id: user.data.user.id,
+              user_id: user.id,
               name: s.name,
               description: s.description,
               channel: s.channel,
@@ -125,7 +183,7 @@ export default function Onboarding() {
               weekStartDate.setDate(weekStartDate.getDate() - weekStartDate.getDay());
               
               const tasks = strategyData.strategy.weeklyTasks.map((t: any, index: number) => ({
-                user_id: user.data.user.id,
+                user_id: user.id,
                 strategy_id: savedStrategies[index % savedStrategies.length]?.id,
                 title: t.title,
                 description: t.description,
@@ -145,6 +203,10 @@ export default function Onboarding() {
         }
       }
 
+      // Clear onboarding data from localStorage on successful completion
+      localStorage.removeItem('onboarding-form-data');
+      localStorage.removeItem('onboarding-step');
+      
       toast({
         title: "Welcome to Marketing Buddy! 🎉",
         description: "Your personalized marketing dashboard is ready",

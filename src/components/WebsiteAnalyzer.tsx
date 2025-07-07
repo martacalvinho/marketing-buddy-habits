@@ -1,48 +1,39 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Globe, Target, Lightbulb, TrendingUp, ExternalLink } from "lucide-react";
-
-interface WebsiteAnalysis {
-  productDescription: string;
-  targetAudience: string;
-  painPoints: string;
-  valueProposition: string;
-  contentQuality: number;
-  suggestions: string[];
-  marketingChannels: string[];
-}
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import AnalysisDisplay from './AnalysisDisplay';
+import { 
+  ExternalLink, 
+  Loader2, 
+  Target, 
+  TrendingUp, 
+  Lightbulb, 
+  Globe 
+} from 'lucide-react';
 
 interface WebsiteAnalyzerProps {
-  onAnalysisComplete: (analysis: WebsiteAnalysis) => void;
+  onAnalysisComplete: (analysis: string) => void;
 }
 
 export default function WebsiteAnalyzer({ onAnalysisComplete }: WebsiteAnalyzerProps) {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysis, setAnalysis] = useState<WebsiteAnalysis | null>(null);
+  const [analysis, setAnalysis] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleAnalyze = async () => {
-    if (!websiteUrl) {
-      toast({
-        title: "ERROR",
-        description: "PLEASE ENTER A WEBSITE URL",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (!websiteUrl) return;
+    
     setIsAnalyzing(true);
     
     try {
-      // Website analysis using Firecrawl and AI
-      const { data, error } = await supabase.functions.invoke('analyze-website-firecrawl', {
-        body: { websiteUrl }
+      // Website analysis using Jina AI
+      const { data, error } = await supabase.functions.invoke('analyze-website-jina', {
+        body: { url: websiteUrl }
       });
 
       if (error) throw error;
@@ -51,9 +42,12 @@ export default function WebsiteAnalyzer({ onAnalysisComplete }: WebsiteAnalyzerP
         setAnalysis(data.analysis);
         onAnalysisComplete(data.analysis);
         
+        // Save analysis to database
+        await saveAnalysisToDatabase(data.analysis);
+        
         toast({
-          title: "ANALYSIS COMPLETE! 🎉",
-          description: `Analyzed ${data.pages_crawled} pages with ${data.crawled_content_length} characters of content`,
+          title: "ANALYSIS COMPLETE! ",
+          description: `Analyzed website with ${data.contentLength} characters of content`,
         });
       } else {
         throw new Error(data.error);
@@ -71,11 +65,79 @@ export default function WebsiteAnalyzer({ onAnalysisComplete }: WebsiteAnalyzerP
     }
   };
 
-  const getQualityColor = (score: number) => {
-    if (score >= 8) return "bg-success text-success-foreground";
-    if (score >= 6) return "bg-warning text-warning-foreground";
-    return "bg-destructive text-destructive-foreground";
+  const saveAnalysisToDatabase = async (analysisText: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          website_url: websiteUrl,
+          website_analysis: {
+            analysis_text: analysisText,
+            analyzed_at: new Date().toISOString(),
+            url: websiteUrl
+          }
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.error('Error saving analysis:', error);
+      }
+    } catch (error) {
+      console.error('Error saving to database:', error);
+    }
   };
+
+  const handleSaveToTasks = async (opportunities: string[], recommendations: string[]) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Create tasks for opportunities and recommendations
+      const tasksToCreate = [
+        ...opportunities.map(opportunity => ({
+          user_id: user.id,
+          title: `Market Opportunity: ${opportunity.substring(0, 50)}...`,
+          description: opportunity,
+          category: 'marketing_opportunity',
+          week_start_date: new Date().toISOString().split('T')[0],
+          ai_suggestion: opportunity
+        })),
+        ...recommendations.map(recommendation => ({
+          user_id: user.id,
+          title: `Action Item: ${recommendation.substring(0, 50)}...`,
+          description: recommendation,
+          category: 'action_item',
+          week_start_date: new Date().toISOString().split('T')[0],
+          ai_suggestion: recommendation
+        }))
+      ];
+
+      const { error } = await supabase
+        .from('tasks')
+        .insert(tasksToCreate);
+
+      if (error) throw error;
+
+      toast({
+        title: "TASKS CREATED! ",
+        description: `Added ${tasksToCreate.length} tasks to your weekly dashboard`,
+      });
+    } catch (error) {
+      console.error('Error creating tasks:', error);
+      toast({
+        title: "ERROR CREATING TASKS",
+        description: "Could not save tasks to dashboard. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+
 
   return (
     <div className="space-y-6">
@@ -128,88 +190,10 @@ export default function WebsiteAnalyzer({ onAnalysisComplete }: WebsiteAnalyzerP
       </Card>
 
       {analysis && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Product Overview */}
-          <Card className="border-4 border-foreground shadow-brutal">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-black uppercase flex items-center gap-2">
-                <Target className="w-5 h-5" />
-                PRODUCT OVERVIEW
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-black text-sm uppercase mb-2">What You're Building:</h4>
-                <p className="text-sm font-medium">{analysis.productDescription}</p>
-              </div>
-              <div>
-                <h4 className="font-black text-sm uppercase mb-2">Target Audience:</h4>
-                <p className="text-sm font-medium">{analysis.targetAudience}</p>
-              </div>
-              <div>
-                <h4 className="font-black text-sm uppercase mb-2">Pain Points Solved:</h4>
-                <p className="text-sm font-medium">{analysis.painPoints}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Value Proposition & Quality */}
-          <Card className="border-4 border-foreground shadow-brutal">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-black uppercase flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                VALUE PROPOSITION
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-black text-sm uppercase mb-2">Main Value:</h4>
-                <p className="text-sm font-medium">{analysis.valueProposition}</p>
-              </div>
-              <div>
-                <h4 className="font-black text-sm uppercase mb-2">Content Quality Score:</h4>
-                <Badge className={`${getQualityColor(analysis.contentQuality)} text-lg px-4 py-2 font-black border-2 border-foreground`}>
-                  {analysis.contentQuality}/10
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Suggestions */}
-          <Card className="md:col-span-2 border-4 border-foreground shadow-brutal">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-black uppercase flex items-center gap-2">
-                <Lightbulb className="w-5 h-5" />
-                IMPROVEMENT SUGGESTIONS
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-black text-sm uppercase mb-3">Landing Page Improvements:</h4>
-                  <ul className="space-y-2">
-                    {analysis.suggestions.map((suggestion, index) => (
-                      <li key={index} className="text-sm font-medium flex items-start gap-2">
-                        <span className="w-3 h-3 bg-foreground border border-foreground mt-1 flex-shrink-0" />
-                        {suggestion}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-black text-sm uppercase mb-3">Recommended Channels:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {analysis.marketingChannels.map((channel, index) => (
-                      <Badge key={index} variant="outline" className="border-2 border-foreground font-black uppercase">
-                        {channel}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <AnalysisDisplay 
+          analysisText={analysis}
+          onSaveToTasks={handleSaveToTasks}
+        />
       )}
     </div>
   );
