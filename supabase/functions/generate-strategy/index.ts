@@ -24,42 +24,47 @@ serve(async (req) => {
       throw new Error('OpenRouter API key not configured');
     }
 
-    const strategyPrompt = `Based on this website analysis, create a personalized marketing strategy with weekly tasks.
+    const strategyPrompt = `Based on this comprehensive website analysis, create a personalized marketing strategy with specific weekly tasks.
 
-Website Analysis:
-- Product: ${analysis.productDescription}
-- Target Audience: ${analysis.targetAudience}
-- Pain Points: ${analysis.painPoints}
-- Value Proposition: ${analysis.valueProposition}
-- Recommended Channels: ${analysis.marketingChannels?.join(', ')}
+=== WEBSITE ANALYSIS ===
+${analysis}
 
+=== USER CONTEXT ===
 User Goal: ${userGoal}
 Product Type: ${productType}
-Active Platforms: ${platforms?.join(', ')}
+Active Platforms: ${platforms?.join(', ') || 'Not specified'}
 
-Create a JSON response with:
+=== INSTRUCTIONS ===
+Analyze the website content above and extract key insights about:
+- The business/product being offered
+- Target audience and their needs
+- Current marketing strengths and weaknesses
+- Specific opportunities for improvement
+- Competitive positioning
+
+Then create a JSON response with:
 {
   "strategies": [
     {
       "name": "Strategy Name",
-      "description": "Brief description",
+      "description": "Brief description based on the analysis",
       "channel": "platform/channel name",
       "priority": "high/medium/low"
     }
   ],
   "weeklyTasks": [
     {
-      "title": "Specific task title",
-      "description": "Detailed description",
-      "category": "SEO/Social/Email/etc",
+      "title": "Specific task title based on the website analysis",
+      "description": "Detailed description referencing specific findings from the analysis",
+      "category": "SEO/Social/Email/Content/etc",
       "priority": "high/medium/low",
-      "estimatedTime": "30 minutes",
-      "aiSuggestion": "Specific actionable advice on how to complete this task"
+      "estimatedTime": "30 minutes to 2 hours",
+      "aiSuggestion": "Specific actionable advice based on the website's current state and opportunities identified"
     }
   ]
 }
 
-Focus on 3-5 strategies and 10-15 weekly tasks. Make tasks specific, actionable, and tailored to their product and audience.`;
+IMPORTANT: Make all strategies and tasks highly specific to this business based on the actual website analysis. Reference specific findings, opportunities, and recommendations from the analysis above. Do NOT use generic marketing advice.`;
 
     const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
