@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Globe, Target, Lightbulb, TrendingUp, ExternalLink } from "lucide-react";
 
 interface WebsiteAnalysis {
@@ -39,39 +40,30 @@ export default function WebsiteAnalyzer({ onAnalysisComplete }: WebsiteAnalyzerP
     setIsAnalyzing(true);
     
     try {
-      // Simple client-side analysis - no external APIs needed
-      const analysisResult: WebsiteAnalysis = {
-        productDescription: "Software or service business based on the provided URL",
-        targetAudience: "Businesses and professionals looking for digital solutions", 
-        painPoints: "Common business challenges around efficiency and growth",
-        valueProposition: "Streamlined solutions for business needs",
-        contentQuality: 7,
-        suggestions: [
-          "Add clear value proposition in hero section",
-          "Include customer testimonials and social proof", 
-          "Optimize page loading speed and mobile experience",
-          "Add clear call-to-action buttons",
-          "Include pricing information if applicable"
-        ],
-        marketingChannels: ["SEO", "Content Marketing", "Social Media", "Email Marketing", "LinkedIn"]
-      };
-
-      // Simulate analysis delay for better UX
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      setAnalysis(analysisResult);
-      onAnalysisComplete(analysisResult);
-      
-      toast({
-        title: "ANALYSIS COMPLETE! 🎉",
-        description: "YOUR WEBSITE HAS BEEN ANALYZED SUCCESSFULLY",
+      // Real website analysis using crawling and AI
+      const { data, error } = await supabase.functions.invoke('analyze-website-real', {
+        body: { websiteUrl }
       });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setAnalysis(data.analysis);
+        onAnalysisComplete(data.analysis);
+        
+        toast({
+          title: "ANALYSIS COMPLETE! 🎉",
+          description: `Analyzed ${data.pages_crawled} pages with ${data.crawled_content_length} characters of content`,
+        });
+      } else {
+        throw new Error(data.error);
+      }
 
     } catch (error) {
       console.error('Analysis error:', error);
       toast({
         title: "ANALYSIS FAILED",
-        description: "COULD NOT ANALYZE WEBSITE. PLEASE TRY AGAIN.",
+        description: "COULD NOT ANALYZE WEBSITE. PLEASE CHECK THE URL AND TRY AGAIN.",
         variant: "destructive",
       });
     } finally {
