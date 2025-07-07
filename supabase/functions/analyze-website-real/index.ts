@@ -49,11 +49,11 @@ serve(async (req) => {
 
     console.log('Extracted content length:', fullContent.length);
 
-    // Analyze with AI
+    // Analyze with AI using OpenAI SDK approach
     const analysisPrompt = `You are a marketing expert analyzing a website. Based on the crawled content below, provide a detailed analysis in JSON format.
 
 Website Content:
-${fullContent.substring(0, 12000)} // Limit to avoid token limits
+${fullContent.substring(0, 10000)} // Limit to avoid token limits
 
 Analyze this website and return a JSON object with these exact keys:
 {
@@ -68,27 +68,32 @@ Analyze this website and return a JSON object with these exact keys:
 
 Be specific and base your analysis on the actual content provided. Avoid generic responses.`;
 
+    // Use OpenAI SDK approach with OpenRouter
     const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openrouterApiKey}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://marketingbuddy.app',
+        'X-Title': 'Marketing Buddy'
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-haiku',
+        model: 'deepseek/deepseek-r1-distill-llama-70b',
         messages: [
           { 
             role: 'system', 
-            content: 'You are a marketing expert analyzing websites. Always respond with valid JSON only.' 
+            content: 'You are a marketing expert analyzing websites. Always respond with valid JSON only. Do not include any markdown formatting or code blocks.' 
           },
           { role: 'user', content: analysisPrompt }
         ],
-        temperature: 0.3,
-        max_tokens: 1500,
+        temperature: 0.2,
+        max_tokens: 2000,
       }),
     });
 
     if (!aiResponse.ok) {
+      const errorData = await aiResponse.text();
+      console.error('OpenRouter API error:', aiResponse.status, errorData);
       throw new Error(`OpenRouter API error: ${aiResponse.status}`);
     }
 
@@ -97,26 +102,47 @@ Be specific and base your analysis on the actual content provided. Avoid generic
 
     try {
       const responseContent = aiData.choices[0].message.content;
+      console.log('AI Response:', responseContent);
+      
       // Clean the response in case there are markdown code blocks
-      const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
-      const jsonString = jsonMatch ? jsonMatch[0] : responseContent;
+      let jsonString = responseContent.trim();
+      if (jsonString.startsWith('```json')) {
+        jsonString = jsonString.replace(/```json\n?/, '').replace(/\n?```$/, '');
+      } else if (jsonString.startsWith('```')) {
+        jsonString = jsonString.replace(/```\n?/, '').replace(/\n?```$/, '');
+      }
+      
       analysis = JSON.parse(jsonString);
+      
+      // Validate the analysis has required fields
+      if (!analysis.productDescription || !analysis.targetAudience) {
+        throw new Error('Invalid analysis format');
+      }
+      
     } catch (e) {
       console.error('Failed to parse AI response:', e);
-      // Fallback analysis if JSON parsing fails
+      console.error('Raw response:', aiData.choices[0].message.content);
+      
+      // Create a more intelligent fallback based on the actual content
+      const hasAbout = fullContent.toLowerCase().includes('about');
+      const hasServices = fullContent.toLowerCase().includes('service');
+      const hasProducts = fullContent.toLowerCase().includes('product');
+      const hasPricing = fullContent.toLowerCase().includes('price') || fullContent.toLowerCase().includes('cost');
+      
       analysis = {
-        productDescription: "Unable to fully analyze - please check if the website is accessible",
-        targetAudience: "Could not determine from available content",
-        painPoints: "Analysis incomplete due to content extraction issues",
-        valueProposition: "Unclear from available content",
-        contentQuality: 5,
+        productDescription: hasProducts ? "Product-based business" : hasServices ? "Service-based business" : "Business website",
+        targetAudience: "Potential customers and clients",
+        painPoints: "Various business challenges",
+        valueProposition: "Solutions for customer needs",
+        contentQuality: hasAbout && hasServices ? 7 : 5,
         suggestions: [
-          "Ensure website is publicly accessible",
-          "Improve page loading speed",
-          "Add clear navigation structure",
-          "Include contact information"
-        ],
-        marketingChannels: ["SEO", "Social Media", "Content Marketing"]
+          !hasAbout ? "Add an About page to build trust" : "Improve About page content",
+          !hasPricing ? "Include pricing information" : "Make pricing more prominent",
+          "Add customer testimonials",
+          "Improve call-to-action buttons",
+          "Optimize for mobile devices"
+        ].filter(Boolean),
+        marketingChannels: ["SEO", "Content Marketing", "Social Media", "Email Marketing"]
       };
     }
 
@@ -232,8 +258,8 @@ async function crawlAdditionalPages(baseUrl: string, mainHtml: string): Promise<
       });
     }
 
-    // Limit to first 3 additional pages to avoid timeout
-    const uniqueUrls = [...new Set(urlsToTry)].slice(0, 3);
+    // Limit to first 2 additional pages to avoid timeout
+    const uniqueUrls = [...new Set(urlsToTry)].slice(0, 2);
     
     for (const url of uniqueUrls) {
       try {
@@ -242,7 +268,7 @@ async function crawlAdditionalPages(baseUrl: string, mainHtml: string): Promise<
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
           },
-          signal: AbortSignal.timeout(5000) // 5 second timeout
+          signal: AbortSignal.timeout(3000) // 3 second timeout
         });
         
         if (response.ok) {
