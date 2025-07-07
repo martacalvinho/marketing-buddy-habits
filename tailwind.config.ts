@@ -137,7 +137,10 @@ export default {
 			},
 			boxShadow: {
 				'soft': 'var(--shadow-soft)',
-				'glow': 'var(--shadow-glow)'
+				'glow': 'var(--shadow-glow)',
+				'brutal': 'var(--shadow-brutal)',
+				'brutal-hover': 'var(--shadow-brutal-hover)',
+				'brutal-small': 'var(--shadow-brutal-small)'
 			}
 		}
 	},

@@ -8,52 +8,53 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 220 25% 97%;
-    --foreground: 220 25% 8%;
+    /* Neobrutalist color scheme */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 8%;
+    --card-foreground: 0 0% 0%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 8%;
+    --popover-foreground: 0 0% 0%;
 
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 262 83% 70%;
+    --primary: 60 100% 50%; /* Bright yellow */
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 220 25% 95%;
-    --secondary-foreground: 220 25% 15%;
+    --secondary: 300 100% 50%; /* Hot pink */
+    --secondary-foreground: 0 0% 0%;
 
-    --muted: 220 25% 95%;
-    --muted-foreground: 220 25% 45%;
+    --muted: 210 40% 98%;
+    --muted-foreground: 215 13% 34%;
 
-    --accent: 142 76% 58%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 120 100% 50%; /* Bright green */
+    --accent-foreground: 0 0% 0%;
 
-    --success: 142 76% 58%;
-    --success-foreground: 0 0% 100%;
+    --success: 120 100% 50%;
+    --success-foreground: 0 0% 0%;
 
-    --warning: 45 93% 58%;
-    --warning-foreground: 0 0% 100%;
+    --warning: 39 100% 50%;
+    --warning-foreground: 0 0% 0%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 100% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 25% 88%;
-    --input: 220 25% 88%;
-    --ring: 262 83% 58%;
+    --border: 0 0% 0%;
+    --input: 0 0% 100%;
+    --ring: 0 0% 0%;
 
-    /* Marketing Buddy specific tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142 76% 70%));
-    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(220 25% 98%));
+    /* Neobrutalist specific tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(var(--accent)));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(var(--muted)));
     
-    --shadow-soft: 0 4px 6px -1px hsl(var(--primary) / 0.1), 0 2px 4px -1px hsl(var(--primary) / 0.06);
-    --shadow-glow: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+    --shadow-brutal: 8px 8px 0px hsl(var(--foreground));
+    --shadow-brutal-hover: 12px 12px 0px hsl(var(--foreground));
+    --shadow-brutal-small: 4px 4px 0px hsl(var(--foreground));
     
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-brutal: all 0.15s ease-out;
 
-    --radius: 0.5rem;
+    --radius: 0rem; /* No border radius for brutal style */
 
     --sidebar-background: 0 0% 98%;
 

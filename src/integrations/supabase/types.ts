@@ -14,7 +14,182 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          current_streak: number | null
+          email: string | null
+          goal: string | null
+          id: string
+          last_activity_date: string | null
+          platforms: string[] | null
+          product_name: string | null
+          product_type: string | null
+          updated_at: string
+          user_id: string
+          website_analysis: Json | null
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number | null
+          email?: string | null
+          goal?: string | null
+          id?: string
+          last_activity_date?: string | null
+          platforms?: string[] | null
+          product_name?: string | null
+          product_type?: string | null
+          updated_at?: string
+          user_id: string
+          website_analysis?: Json | null
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number | null
+          email?: string | null
+          goal?: string | null
+          id?: string
+          last_activity_date?: string | null
+          platforms?: string[] | null
+          product_name?: string | null
+          product_type?: string | null
+          updated_at?: string
+          user_id?: string
+          website_analysis?: Json | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      strategies: {
+        Row: {
+          ai_generated: boolean | null
+          channel: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          ai_generated?: boolean | null
+          channel?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          ai_generated?: boolean | null
+          channel?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          ai_suggestion: string | null
+          category: string | null
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          estimated_time: string | null
+          id: string
+          priority: string | null
+          result_metrics: Json | null
+          result_notes: string | null
+          strategy_id: string | null
+          title: string
+          user_approach: string | null
+          user_id: string
+          week_start_date: string
+        }
+        Insert: {
+          ai_suggestion?: string | null
+          category?: string | null
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_time?: string | null
+          id?: string
+          priority?: string | null
+          result_metrics?: Json | null
+          result_notes?: string | null
+          strategy_id?: string | null
+          title: string
+          user_approach?: string | null
+          user_id: string
+          week_start_date: string
+        }
+        Update: {
+          ai_suggestion?: string | null
+          category?: string | null
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_time?: string | null
+          id?: string
+          priority?: string | null
+          result_metrics?: Json | null
+          result_notes?: string | null
+          strategy_id?: string | null
+          title?: string
+          user_approach?: string | null
+          user_id?: string
+          week_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_stats: {
+        Row: {
+          id: string
+          platform: string
+          posts_count: number | null
+          target_count: number | null
+          updated_at: string
+          user_id: string
+          week_start_date: string
+        }
+        Insert: {
+          id?: string
+          platform: string
+          posts_count?: number | null
+          target_count?: number | null
+          updated_at?: string
+          user_id: string
+          week_start_date: string
+        }
+        Update: {
+          id?: string
+          platform?: string
+          posts_count?: number | null
+          target_count?: number | null
+          updated_at?: string
+          user_id?: string
+          week_start_date?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

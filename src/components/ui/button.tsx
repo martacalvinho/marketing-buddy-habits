@@ -5,21 +5,21 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-bold ring-offset-background transition-brutal focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-4 border-foreground uppercase tracking-wide",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-primary text-primary-foreground shadow-brutal hover:shadow-brutal-hover active:translate-x-1 active:translate-y-1 active:shadow-brutal-small",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground shadow-brutal hover:shadow-brutal-hover active:translate-x-1 active:translate-y-1 active:shadow-brutal-small",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "bg-background text-foreground shadow-brutal hover:shadow-brutal-hover active:translate-x-1 active:translate-y-1 active:shadow-brutal-small",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        hero: "bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-soft hover:shadow-glow transition-all duration-300",
-        success: "bg-gradient-success text-success-foreground hover:opacity-90",
+          "bg-secondary text-secondary-foreground shadow-brutal hover:shadow-brutal-hover active:translate-x-1 active:translate-y-1 active:shadow-brutal-small",
+        ghost: "border-0 shadow-none hover:bg-accent hover:text-accent-foreground",
+        link: "border-0 shadow-none text-primary underline-offset-4 hover:underline",
+        hero: "bg-accent text-accent-foreground shadow-brutal hover:shadow-brutal-hover active:translate-x-1 active:translate-y-1 active:shadow-brutal-small",
+        success: "bg-success text-success-foreground shadow-brutal hover:shadow-brutal-hover active:translate-x-1 active:translate-y-1 active:shadow-brutal-small",
       },
       size: {
         default: "h-10 px-4 py-2",
