@@ -244,19 +244,7 @@ export default function Onboarding() {
 
             {step === 2 && (
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="website-url" className="text-sm font-black uppercase">Website URL</Label>
-                  <Input
-                    id="website-url"
-                    placeholder="https://yourwebsite.com"
-                    value={formData.websiteUrl}
-                    onChange={(e) => setFormData(prev => ({ ...prev, websiteUrl: e.target.value }))}
-                    className="border-4 border-foreground text-base font-medium"
-                  />
-                </div>
-                {formData.websiteUrl && (
-                  <WebsiteAnalyzer onAnalysisComplete={handleAnalysisComplete} />
-                )}
+                <WebsiteAnalyzer onAnalysisComplete={handleAnalysisComplete} />
               </div>
             )}
 
@@ -310,7 +298,7 @@ export default function Onboarding() {
                   onClick={nextStep}
                   disabled={
                     (step === 1 && (!formData.productType || !formData.productName)) ||
-                    (step === 2 && !formData.websiteUrl) ||
+                    (step === 2 && !formData.websiteAnalysis) ||
                     (step === 3 && !formData.goal)
                   }
                   variant="hero"
