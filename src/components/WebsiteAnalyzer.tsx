@@ -40,8 +40,8 @@ export default function WebsiteAnalyzer({ onAnalysisComplete }: WebsiteAnalyzerP
     setIsAnalyzing(true);
     
     try {
-      // Real website analysis using crawling and AI
-      const { data, error } = await supabase.functions.invoke('analyze-website-real', {
+      // Website analysis using Firecrawl and AI
+      const { data, error } = await supabase.functions.invoke('analyze-website-firecrawl', {
         body: { websiteUrl }
       });
 
