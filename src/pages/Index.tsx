@@ -144,45 +144,47 @@ const FEATURES = [
 
 const PRICING_PLANS = [
   {
-    name: "Free",
-    price: "$0",
-    period: "forever",
+    name: "Starter",
+    price: "$9",
+    period: "per month",
     features: [
       "Website analysis",
-      "3 daily tasks per week",
+      "5 daily tasks per week",
       "Basic streak tracking",
+      "Strategy library access",
       "Community support"
     ],
-    cta: "Get Started Free",
+    cta: "Start Starter Plan",
     popular: false
   },
   {
     name: "Pro",
-    price: "$19",
+    price: "$18",
     period: "per month",
     features: [
-      "Everything in Free",
+      "Everything in Starter",
       "Unlimited daily tasks",
-      "Advanced analytics",
-      "Strategy library access",
+      "Strategy library edit access",
+      "Campaign tracking",
       "Priority support"
     ],
-    cta: "Start Pro Trial",
+    cta: "Start Pro Plan",
     popular: true
   },
   {
-    name: "Team",
-    price: "$49",
+    name: "Teams",
+    price: "$27",
     period: "per month",
     features: [
       "Everything in Pro",
       "Team collaboration",
       "Custom strategies",
       "Dedicated support",
-      "White-label option"
+      "Advanced analytics"
     ],
-    cta: "Contact Sales",
-    popular: false
+    cta: "Coming Soon",
+    popular: false,
+    disabled: true
   }
 ];
 
@@ -236,11 +238,11 @@ const Index = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto place-items-center lg:place-items-stretch">
           {FEATURES.map((feature, index) => {
             const isExpanded = expandedCard === index;
             return (
-              <div key={index} className="space-y-4">
+              <div key={index} className="space-y-4 w-full max-w-sm lg:max-w-none">
                 {/* Main Card */}
                 <Card 
                   className="bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 cursor-pointer hover:scale-105"
@@ -264,7 +266,7 @@ const Index = () => {
 
                 {/* Expanded Preview */}
                 <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                  isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                  isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
                 }`}>
                   {isExpanded && (
                     <Card className="bg-accent/5 border-2 border-accent shadow-brutal animate-fade-in">
@@ -274,9 +276,11 @@ const Index = () => {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        {feature.preview.content}
+                        <div className="overflow-auto max-h-[500px]">
+                          {feature.preview.content}
+                        </div>
                         <div className="mt-4 pt-3 border-t border-accent/20">
-                          <p className="text-sm text-muted-foreground italic">
+                          <p className="text-sm text-muted-foreground italic break-words">
                             "{feature.example}"
                           </p>
                         </div>
@@ -331,9 +335,10 @@ const Index = () => {
                   className="w-full mt-6" 
                   variant={plan.popular ? "default" : "outline"}
                   size="lg"
-                  asChild
+                  disabled={plan.disabled}
+                  {...(plan.disabled ? {} : { asChild: true })}
                 >
-                  <a href="/auth">{plan.cta}</a>
+                  {plan.disabled ? plan.cta : <a href="/auth">{plan.cta}</a>}
                 </Button>
               </CardContent>
             </Card>
