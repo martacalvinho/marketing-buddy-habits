@@ -245,7 +245,7 @@ const Index = () => {
               <div key={index} className="space-y-4 w-full max-w-[320px] flex-none md:w-[calc(33.333%-1rem)]">
                 {/* Main Card */}
                 <Card 
-                  className="bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 cursor-pointer hover:scale-105"
+                  className="bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 cursor-pointer hover:scale-105 h-72 flex flex-col"
                   onClick={() => toggleCard(index)}
                 >
                   <CardHeader className="text-center pb-4">
