@@ -7,32 +7,138 @@ const FEATURES = [
   {
     icon: Globe,
     title: "Website Analysis",
-    description: "Input your website URL to get AI-powered feedback and personalized marketing tasks for your unique project",
-    example: "Enter your URL and instantly get insights like 'Add customer testimonials to your homepage' and 'Create a case study for your pricing page'"
+    description: "Input your website URL to get AI-powered feedback and personalized marketing tasks",
+    example: "Enter your URL and instantly get insights like 'Add customer testimonials to your homepage' and 'Create a case study for your pricing page'",
+    preview: {
+      title: "Website Analysis in Action",
+      content: (
+        <div className="bg-background/90 border-2 border-foreground shadow-brutal-small p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm">
+            <div className="w-3 h-3 bg-success rounded-full"></div>
+            <span>Analysis complete for myapp.com</span>
+          </div>
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Recommended Tasks:</div>
+            <div className="bg-primary/10 border border-primary/20 p-3 text-sm">
+              📝 Add customer testimonials to your homepage
+            </div>
+            <div className="bg-accent/10 border border-accent/20 p-3 text-sm">
+              📊 Create a case study for your pricing page
+            </div>
+          </div>
+        </div>
+      )
+    }
   },
   {
     icon: Check,
     title: "Daily Tasks",
-    description: "Get personalized marketing tasks tailored to your business type and goals",
-    example: "Your daily task: 'Write a LinkedIn post about your latest feature update' - estimated time: 15 minutes"
+    description: "Get personalized marketing tasks tailored to your business and goals",
+    example: "Your daily task: 'Write a LinkedIn post about your latest feature update' - estimated time: 15 minutes",
+    preview: {
+      title: "Today's Marketing Tasks",
+      content: (
+        <div className="bg-background/90 border-2 border-foreground shadow-brutal-small p-4 space-y-3">
+          <div className="text-sm font-medium">Today's Tasks</div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/20">
+              <Check className="w-4 h-4 text-success" />
+              <div className="flex-1">
+                <div className="text-sm font-medium">Write LinkedIn post about new feature</div>
+                <div className="text-xs text-muted-foreground">15 minutes • High priority</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-secondary/10 border border-secondary/20">
+              <div className="w-4 h-4 border-2 border-foreground bg-background"></div>
+              <div className="flex-1">
+                <div className="text-sm font-medium">Share customer success story</div>
+                <div className="text-xs text-muted-foreground">10 minutes • Medium priority</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
   },
   {
     icon: Star,
     title: "Streak Tracking",
     description: "Build consistent marketing habits with our visual streak tracker",
-    example: "🔥 7-day streak! You've completed 14 marketing tasks this week. Keep the momentum going!"
+    example: "🔥 7-day streak! You've completed 14 marketing tasks this week. Keep the momentum going!",
+    preview: {
+      title: "Your Marketing Streak",
+      content: (
+        <div className="bg-background/90 border-2 border-foreground shadow-brutal-small p-4 space-y-3">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-accent">🔥 7</div>
+            <div className="text-sm font-medium">Day Streak</div>
+          </div>
+          <div className="flex justify-center gap-1">
+            {[1,2,3,4,5,6,7].map((day) => (
+              <div key={day} className="w-6 h-6 bg-accent border border-foreground text-xs flex items-center justify-center font-bold">
+                {day}
+              </div>
+            ))}
+          </div>
+          <div className="text-center text-sm bg-success/10 border border-success/20 p-2">
+            14 tasks completed this week!
+          </div>
+        </div>
+      )
+    }
   },
   {
     icon: Users,
     title: "Strategy Library",
     description: "Access proven marketing strategies with step-by-step guides",
-    example: "Browse strategies like 'Product Hunt Launch Guide' with detailed steps from pre-launch to post-launch follow-up"
+    example: "Browse strategies like 'Product Hunt Launch Guide' with detailed steps from pre-launch to post-launch follow-up",
+    preview: {
+      title: "Featured Marketing Strategies",
+      content: (
+        <div className="bg-background/90 border-2 border-foreground shadow-brutal-small p-4 space-y-3">
+          <div className="space-y-2">
+            <div className="bg-primary/10 border border-primary/20 p-3">
+              <div className="text-sm font-medium">🚀 Product Hunt Launch Guide</div>
+              <div className="text-xs text-muted-foreground">12 steps • Launch strategy</div>
+            </div>
+            <div className="bg-accent/10 border border-accent/20 p-3">
+              <div className="text-sm font-medium">📱 Social Media Content Calendar</div>
+              <div className="text-xs text-muted-foreground">8 steps • Content strategy</div>
+            </div>
+            <div className="bg-secondary/10 border border-secondary/20 p-3">
+              <div className="text-sm font-medium">📧 Email Marketing Automation</div>
+              <div className="text-xs text-muted-foreground">15 steps • Email strategy</div>
+            </div>
+          </div>
+        </div>
+      )
+    }
   },
   {
     icon: Calendar,
     title: "Experiment Tracking",
     description: "Test new ideas and track what works for your unique business",
-    example: "Track experiments like 'A/B test pricing page copy' with conversion metrics and results analysis"
+    example: "Track experiments like 'A/B test pricing page copy' with conversion metrics and results analysis",
+    preview: {
+      title: "Active Experiments",
+      content: (
+        <div className="bg-background/90 border-2 border-foreground shadow-brutal-small p-4 space-y-3">
+          <div className="space-y-2">
+            <div className="bg-warning/10 border border-warning/20 p-3">
+              <div className="text-sm font-medium">A/B Test: Pricing Page Copy</div>
+              <div className="text-xs text-muted-foreground">Running • 64% conversion rate</div>
+              <div className="w-full bg-background border border-foreground h-2 mt-1">
+                <div className="bg-warning h-full w-3/5"></div>
+              </div>
+            </div>
+            <div className="bg-success/10 border border-success/20 p-3">
+              <div className="text-sm font-medium">Landing Page Headlines</div>
+              <div className="text-xs text-muted-foreground">Completed • +23% conversion</div>
+            </div>
+          </div>
+        </div>
+      )
+    }
   }
 ];
 
@@ -81,14 +187,10 @@ const PRICING_PLANS = [
 ];
 
 const Index = () => {
-  const [flippedCards, setFlippedCards] = useState<number[]>([]);
+  const [expandedCard, setExpandedCard] = useState<number | null>(null);
 
   const toggleCard = (index: number) => {
-    setFlippedCards(prev => 
-      prev.includes(index) 
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
-    );
+    setExpandedCard(prev => prev === index ? null : index);
   };
 
   return (
@@ -134,57 +236,53 @@ const Index = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {FEATURES.map((feature, index) => {
-            const isFlipped = flippedCards.includes(index);
+            const isExpanded = expandedCard === index;
             return (
-              <div 
-                key={index} 
-                className="group perspective-1000 cursor-pointer h-80"
-                onClick={() => toggleCard(index)}
-              >
-                <div className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-                  {/* Front of card */}
-                  <Card className="absolute inset-0 bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 animate-fade-in backface-hidden">
-                    <CardHeader className="text-center">
-                      <div className="inline-flex items-center justify-center w-12 h-12 bg-primary border-2 border-foreground shadow-brutal-small mb-4 mx-auto">
-                        <feature.icon className="w-6 h-6 text-primary-foreground" />
-                      </div>
-                      <CardTitle className="text-xl">{feature.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-col justify-between flex-1">
-                      <CardDescription className="text-center text-base mb-4">
-                        {feature.description}
-                      </CardDescription>
-                      <div className="text-center">
-                        <span className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                          <RotateCcw className="w-3 h-3" />
-                          Click to see example
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+              <div key={index} className="space-y-4">
+                {/* Main Card */}
+                <Card 
+                  className="bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 cursor-pointer hover:scale-105"
+                  onClick={() => toggleCard(index)}
+                >
+                  <CardHeader className="text-center pb-4">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-primary border-2 border-foreground shadow-brutal-small mb-4 mx-auto">
+                      <feature.icon className="w-8 h-8 text-primary-foreground" />
+                    </div>
+                    <CardTitle className="text-xl font-bold">{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    <CardDescription className="text-base mb-4">
+                      {feature.description}
+                    </CardDescription>
+                    <Button variant="outline" size="sm" className="text-sm">
+                      {isExpanded ? "Hide Preview" : "See Dashboard Preview"}
+                    </Button>
+                  </CardContent>
+                </Card>
 
-                  {/* Back of card */}
-                  <Card className="absolute inset-0 bg-accent/10 border-2 border-accent shadow-brutal hover:shadow-brutal-hover transition-all duration-300 rotate-y-180 backface-hidden">
-                    <CardHeader className="text-center">
-                      <div className="inline-flex items-center justify-center w-12 h-12 bg-accent border-2 border-foreground shadow-brutal-small mb-4 mx-auto">
-                        <feature.icon className="w-6 h-6 text-accent-foreground" />
-                      </div>
-                      <CardTitle className="text-xl text-accent-foreground">{feature.title} Example</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-col justify-between flex-1">
-                      <CardDescription className="text-center text-sm italic bg-background/50 p-3 rounded border border-foreground/20">
-                        "{feature.example}"
-                      </CardDescription>
-                      <div className="text-center mt-4">
-                        <span className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                          <RotateCcw className="w-3 h-3" />
-                          Click to go back
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* Expanded Preview */}
+                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                  isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                }`}>
+                  {isExpanded && (
+                    <Card className="bg-accent/5 border-2 border-accent shadow-brutal animate-fade-in">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg text-accent-foreground">
+                          {feature.preview.title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {feature.preview.content}
+                        <div className="mt-4 pt-3 border-t border-accent/20">
+                          <p className="text-sm text-muted-foreground italic">
+                            "{feature.example}"
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </div>
             );
