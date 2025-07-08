@@ -8,73 +8,31 @@ const FEATURES = [
     icon: Globe,
     title: "Website Analysis",
     description: "Input your website URL to get AI-powered feedback and personalized marketing tasks for your unique project",
-    uiPreview: (
-      <div className="bg-background border-2 border-foreground p-4 space-y-3">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-3 h-3 bg-primary border border-foreground"></div>
-          <span className="text-sm font-bold">Website Analysis Results</span>
-        </div>
-        <div className="space-y-2">
-          <div className="bg-accent/20 border border-foreground p-2 text-xs">
-            <span className="font-bold">📝 Task:</span> Add customer testimonials to your homepage
-          </div>
-          <div className="bg-accent/20 border border-foreground p-2 text-xs">
-            <span className="font-bold">📝 Task:</span> Create a case study for your pricing page
-          </div>
-          <div className="bg-accent/20 border border-foreground p-2 text-xs">
-            <span className="font-bold">📝 Task:</span> Optimize your call-to-action buttons
-          </div>
-        </div>
-      </div>
-    )
+    example: "Enter your URL and instantly get insights like 'Add customer testimonials to your homepage' and 'Create a case study for your pricing page'"
   },
   {
     icon: Check,
     title: "Daily Tasks",
     description: "Get personalized marketing tasks tailored to your business type and goals",
-    uiPreview: (
-      <div className="bg-background border-2 border-foreground p-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-bold">Today's Tasks</span>
-          <div className="bg-primary text-primary-foreground px-2 py-1 text-xs border border-foreground">2/3</div>
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 p-2 bg-success/20 border border-foreground">
-            <div className="w-4 h-4 bg-success border border-foreground flex items-center justify-center">
-              <Check className="w-2 h-2" />
-            </div>
-            <span className="text-xs">Write LinkedIn post about new feature</span>
-          </div>
-          <div className="flex items-center gap-2 p-2 bg-background border border-foreground">
-            <div className="w-4 h-4 border-2 border-foreground"></div>
-            <span className="text-xs">Update product screenshots</span>
-          </div>
-        </div>
-      </div>
-    )
+    example: "Your daily task: 'Write a LinkedIn post about your latest feature update' - estimated time: 15 minutes"
   },
   {
     icon: Star,
     title: "Streak Tracking",
     description: "Build consistent marketing habits with our visual streak tracker",
-    uiPreview: (
-      <div className="bg-background border-2 border-foreground p-4">
-        <div className="text-center mb-3">
-          <div className="text-2xl mb-1">🔥</div>
-          <span className="text-sm font-bold">7-day streak!</span>
-        </div>
-        <div className="flex justify-center gap-1 mb-3">
-          {[1,2,3,4,5,6,7].map((day) => (
-            <div key={day} className="w-6 h-6 bg-success border border-foreground flex items-center justify-center">
-              <div className="w-2 h-2 bg-success-foreground"></div>
-            </div>
-          ))}
-        </div>
-        <div className="text-center text-xs text-muted-foreground">
-          14 tasks completed this week
-        </div>
-      </div>
-    )
+    example: "🔥 7-day streak! You've completed 14 marketing tasks this week. Keep the momentum going!"
+  },
+  {
+    icon: Users,
+    title: "Strategy Library",
+    description: "Access proven marketing strategies with step-by-step guides",
+    example: "Browse strategies like 'Product Hunt Launch Guide' with detailed steps from pre-launch to post-launch follow-up"
+  },
+  {
+    icon: Calendar,
+    title: "Experiment Tracking",
+    description: "Test new ideas and track what works for your unique business",
+    example: "Track experiments like 'A/B test pricing page copy' with conversion metrics and results analysis"
   }
 ];
 
@@ -176,61 +134,57 @@ const Index = () => {
           </p>
         </div>
         
-        <div className="space-y-12 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {FEATURES.map((feature, index) => {
             const isFlipped = flippedCards.includes(index);
             return (
               <div 
                 key={index} 
-                className="perspective-1000 cursor-pointer h-64"
+                className="group perspective-1000 cursor-pointer h-80"
                 onClick={() => toggleCard(index)}
               >
                 <div className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                   {/* Front of card */}
-                  <div className="absolute inset-0 backface-hidden">
-                    <Card className="w-full h-full bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300">
-                      <div className="flex items-center gap-8 p-8 h-full">
-                        <div className="flex-shrink-0">
-                          <div className="w-16 h-16 bg-primary border-2 border-foreground shadow-brutal-small flex items-center justify-center">
-                            <feature.icon className="w-8 h-8 text-primary-foreground" />
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
-                          <p className="text-lg text-muted-foreground mb-4">
-                            {feature.description}
-                          </p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <RotateCcw className="w-4 h-4" />
-                            Click to see dashboard preview
-                          </div>
-                        </div>
+                  <Card className="absolute inset-0 bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 animate-fade-in backface-hidden">
+                    <CardHeader className="text-center">
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-primary border-2 border-foreground shadow-brutal-small mb-4 mx-auto">
+                        <feature.icon className="w-6 h-6 text-primary-foreground" />
                       </div>
-                    </Card>
-                  </div>
+                      <CardTitle className="text-xl">{feature.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col justify-between flex-1">
+                      <CardDescription className="text-center text-base mb-4">
+                        {feature.description}
+                      </CardDescription>
+                      <div className="text-center">
+                        <span className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                          <RotateCcw className="w-3 h-3" />
+                          Click to see example
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                  {/* Back of card - Dashboard UI Preview */}
-                  <div className="absolute inset-0 rotate-y-180 backface-hidden">
-                    <Card className="w-full h-full bg-accent/10 border-2 border-accent shadow-brutal hover:shadow-brutal-hover transition-all duration-300">
-                      <div className="flex items-center gap-8 p-8 h-full">
-                        <div className="flex-shrink-0">
-                          <div className="w-16 h-16 bg-accent border-2 border-foreground shadow-brutal-small flex items-center justify-center">
-                            <feature.icon className="w-8 h-8 text-accent-foreground" />
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-2xl font-bold mb-4 text-accent-foreground">{feature.title} Dashboard</h3>
-                          <div className="mb-4">
-                            {feature.uiPreview}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <RotateCcw className="w-4 h-4" />
-                            Click to go back
-                          </div>
-                        </div>
+                  {/* Back of card */}
+                  <Card className="absolute inset-0 bg-accent/10 border-2 border-accent shadow-brutal hover:shadow-brutal-hover transition-all duration-300 rotate-y-180 backface-hidden">
+                    <CardHeader className="text-center">
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-accent border-2 border-foreground shadow-brutal-small mb-4 mx-auto">
+                        <feature.icon className="w-6 h-6 text-accent-foreground" />
                       </div>
-                    </Card>
-                  </div>
+                      <CardTitle className="text-xl text-accent-foreground">{feature.title} Example</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col justify-between flex-1">
+                      <CardDescription className="text-center text-sm italic bg-background/50 p-3 rounded border border-foreground/20">
+                        "{feature.example}"
+                      </CardDescription>
+                      <div className="text-center mt-4">
+                        <span className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                          <RotateCcw className="w-3 h-3" />
+                          Click to go back
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             );
