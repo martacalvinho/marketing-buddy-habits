@@ -1,8 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Star, Users, Calendar } from "lucide-react";
+import { Check, Star, Users, Calendar, Globe } from "lucide-react";
 
 const FEATURES = [
+  {
+    icon: Globe,
+    title: "Website Analysis",
+    description: "Input your website URL to get AI-powered feedback and personalized marketing tasks for your unique project"
+  },
   {
     icon: Check,
     title: "Daily Tasks",
@@ -22,6 +27,50 @@ const FEATURES = [
     icon: Calendar,
     title: "Experiment Tracking",
     description: "Test new ideas and track what works for your unique business"
+  }
+];
+
+const PRICING_PLANS = [
+  {
+    name: "Free",
+    price: "$0",
+    period: "forever",
+    features: [
+      "Website analysis",
+      "3 daily tasks per week",
+      "Basic streak tracking",
+      "Community support"
+    ],
+    cta: "Get Started Free",
+    popular: false
+  },
+  {
+    name: "Pro",
+    price: "$19",
+    period: "per month",
+    features: [
+      "Everything in Free",
+      "Unlimited daily tasks",
+      "Advanced analytics",
+      "Strategy library access",
+      "Priority support"
+    ],
+    cta: "Start Pro Trial",
+    popular: true
+  },
+  {
+    name: "Team",
+    price: "$49",
+    period: "per month",
+    features: [
+      "Everything in Pro",
+      "Team collaboration",
+      "Custom strategies",
+      "Dedicated support",
+      "White-label option"
+    ],
+    cta: "Contact Sales",
+    popular: false
   }
 ];
 
@@ -69,7 +118,7 @@ const Index = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {FEATURES.map((feature, index) => (
             <Card key={index} className="bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 animate-fade-in">
               <CardHeader className="text-center">
@@ -82,6 +131,57 @@ const Index = () => {
                 <CardDescription className="text-center text-base">
                   {feature.description}
                 </CardDescription>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="container mx-auto px-4 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Simple, transparent pricing
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Choose the plan that fits your marketing journey
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {PRICING_PLANS.map((plan, index) => (
+            <Card key={index} className={`bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 relative ${plan.popular ? 'scale-105' : ''}`}>
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-accent text-accent-foreground px-4 py-2 border-2 border-foreground shadow-brutal-small text-sm font-bold uppercase tracking-wide">
+                    Most Popular
+                  </div>
+                </div>
+              )}
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+                <div className="flex items-baseline justify-center gap-1 mt-4">
+                  <span className="text-4xl font-bold">{plan.price}</span>
+                  <span className="text-muted-foreground">/{plan.period}</span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3">
+                  {plan.features.map((feature, featureIndex) => (
+                    <li key={featureIndex} className="flex items-center gap-3">
+                      <Check className="w-5 h-5 text-success flex-shrink-0" />
+                      <span className="text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button 
+                  className="w-full mt-6" 
+                  variant={plan.popular ? "default" : "outline"}
+                  size="lg"
+                  asChild
+                >
+                  <a href="/auth">{plan.cta}</a>
+                </Button>
               </CardContent>
             </Card>
           ))}
