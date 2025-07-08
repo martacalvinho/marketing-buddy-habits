@@ -7,7 +7,7 @@ const FEATURES = [
   {
     icon: Globe,
     title: "Website Analysis",
-    description: "Input your website URL to get AI-powered feedback and personalized marketing tasks",
+    description: "Get AI-powered feedback and personalized marketing tasks for your website",
     example: "Enter your URL and instantly get insights like 'Add customer testimonials to your homepage' and 'Create a case study for your pricing page'",
     preview: {
       title: "Website Analysis in Action",
