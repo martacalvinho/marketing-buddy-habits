@@ -1,32 +1,38 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Star, Users, Calendar, Globe } from "lucide-react";
+import { Check, Star, Users, Calendar, Globe, RotateCcw } from "lucide-react";
 
 const FEATURES = [
   {
     icon: Globe,
     title: "Website Analysis",
-    description: "Input your website URL to get AI-powered feedback and personalized marketing tasks for your unique project"
+    description: "Input your website URL to get AI-powered feedback and personalized marketing tasks for your unique project",
+    example: "Enter your URL and instantly get insights like 'Add customer testimonials to your homepage' and 'Create a case study for your pricing page'"
   },
   {
     icon: Check,
     title: "Daily Tasks",
-    description: "Get personalized marketing tasks tailored to your business type and goals"
+    description: "Get personalized marketing tasks tailored to your business type and goals",
+    example: "Your daily task: 'Write a LinkedIn post about your latest feature update' - estimated time: 15 minutes"
   },
   {
     icon: Star,
     title: "Streak Tracking",
-    description: "Build consistent marketing habits with our visual streak tracker"
+    description: "Build consistent marketing habits with our visual streak tracker",
+    example: "🔥 7-day streak! You've completed 14 marketing tasks this week. Keep the momentum going!"
   },
   {
     icon: Users,
     title: "Strategy Library",
-    description: "Access proven marketing strategies with step-by-step guides"
+    description: "Access proven marketing strategies with step-by-step guides",
+    example: "Browse strategies like 'Product Hunt Launch Guide' with detailed steps from pre-launch to post-launch follow-up"
   },
   {
     icon: Calendar,
     title: "Experiment Tracking",
-    description: "Test new ideas and track what works for your unique business"
+    description: "Test new ideas and track what works for your unique business",
+    example: "Track experiments like 'A/B test pricing page copy' with conversion metrics and results analysis"
   }
 ];
 
@@ -75,6 +81,16 @@ const PRICING_PLANS = [
 ];
 
 const Index = () => {
+  const [flippedCards, setFlippedCards] = useState<number[]>([]);
+
+  const toggleCard = (index: number) => {
+    setFlippedCards(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10">
       {/* Hero Section */}
@@ -119,21 +135,60 @@ const Index = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-          {FEATURES.map((feature, index) => (
-            <Card key={index} className="bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 animate-fade-in">
-              <CardHeader className="text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-primary border-2 border-foreground shadow-brutal-small mb-4 mx-auto">
-                  <feature.icon className="w-6 h-6 text-primary-foreground" />
+          {FEATURES.map((feature, index) => {
+            const isFlipped = flippedCards.includes(index);
+            return (
+              <div 
+                key={index} 
+                className="group perspective-1000 cursor-pointer h-80"
+                onClick={() => toggleCard(index)}
+              >
+                <div className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+                  {/* Front of card */}
+                  <Card className="absolute inset-0 bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 animate-fade-in backface-hidden">
+                    <CardHeader className="text-center">
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-primary border-2 border-foreground shadow-brutal-small mb-4 mx-auto">
+                        <feature.icon className="w-6 h-6 text-primary-foreground" />
+                      </div>
+                      <CardTitle className="text-xl">{feature.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col justify-between flex-1">
+                      <CardDescription className="text-center text-base mb-4">
+                        {feature.description}
+                      </CardDescription>
+                      <div className="text-center">
+                        <span className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                          <RotateCcw className="w-3 h-3" />
+                          Click to see example
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Back of card */}
+                  <Card className="absolute inset-0 bg-accent/10 border-2 border-accent shadow-brutal hover:shadow-brutal-hover transition-all duration-300 rotate-y-180 backface-hidden">
+                    <CardHeader className="text-center">
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-accent border-2 border-foreground shadow-brutal-small mb-4 mx-auto">
+                        <feature.icon className="w-6 h-6 text-accent-foreground" />
+                      </div>
+                      <CardTitle className="text-xl text-accent-foreground">{feature.title} Example</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col justify-between flex-1">
+                      <CardDescription className="text-center text-sm italic bg-background/50 p-3 rounded border border-foreground/20">
+                        "{feature.example}"
+                      </CardDescription>
+                      <div className="text-center mt-4">
+                        <span className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                          <RotateCcw className="w-3 h-3" />
+                          Click to go back
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-                <CardTitle className="text-xl">{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center text-base">
-                  {feature.description}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </section>
 
