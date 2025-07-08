@@ -238,11 +238,11 @@ const Index = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto justify-items-center">
+        <div className="flex flex-wrap justify-center gap-8 max-w-6xl mx-auto">
           {FEATURES.map((feature, index) => {
             const isExpanded = expandedCard === index;
             return (
-              <div key={index} className="space-y-4 w-full max-w-sm lg:max-w-none">
+              <div key={index} className="space-y-4 w-full max-w-sm flex-none">
                 {/* Main Card */}
                 <Card 
                   className="bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 cursor-pointer hover:scale-105"
