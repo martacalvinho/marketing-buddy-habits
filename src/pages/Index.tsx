@@ -176,57 +176,61 @@ const Index = () => {
           </p>
         </div>
         
-        <div className="space-y-12 max-w-4xl mx-auto">
+        <div className="space-y-12 max-w-6xl mx-auto">
           {FEATURES.map((feature, index) => {
             const isFlipped = flippedCards.includes(index);
             return (
               <div 
                 key={index} 
-                className="group perspective-1000 cursor-pointer"
+                className="perspective-1000 cursor-pointer h-64"
                 onClick={() => toggleCard(index)}
               >
-                <div className={`relative w-full transition-transform duration-700 transform-style-preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+                <div className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                   {/* Front of card */}
-                  <Card className="absolute inset-0 bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 animate-fade-in backface-hidden p-8">
-                    <div className="flex items-center gap-8">
-                      <div className="flex-shrink-0">
-                        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary border-2 border-foreground shadow-brutal-small mb-4">
-                          <feature.icon className="w-8 h-8 text-primary-foreground" />
+                  <div className="absolute inset-0 backface-hidden">
+                    <Card className="w-full h-full bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300">
+                      <div className="flex items-center gap-8 p-8 h-full">
+                        <div className="flex-shrink-0">
+                          <div className="w-16 h-16 bg-primary border-2 border-foreground shadow-brutal-small flex items-center justify-center">
+                            <feature.icon className="w-8 h-8 text-primary-foreground" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
+                          <p className="text-lg text-muted-foreground mb-4">
+                            {feature.description}
+                          </p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <RotateCcw className="w-4 h-4" />
+                            Click to see dashboard preview
+                          </div>
                         </div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
-                        <p className="text-lg text-muted-foreground mb-4">
-                          {feature.description}
-                        </p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <RotateCcw className="w-4 h-4" />
-                          Click to see dashboard preview
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  </div>
 
                   {/* Back of card - Dashboard UI Preview */}
-                  <Card className="absolute inset-0 bg-accent/10 border-2 border-accent shadow-brutal hover:shadow-brutal-hover transition-all duration-300 rotate-y-180 backface-hidden p-8">
-                    <div className="flex items-center gap-8 h-full">
-                      <div className="flex-shrink-0">
-                        <div className="inline-flex items-center justify-center w-16 h-16 bg-accent border-2 border-foreground shadow-brutal-small mb-4">
-                          <feature.icon className="w-8 h-8 text-accent-foreground" />
+                  <div className="absolute inset-0 rotate-y-180 backface-hidden">
+                    <Card className="w-full h-full bg-accent/10 border-2 border-accent shadow-brutal hover:shadow-brutal-hover transition-all duration-300">
+                      <div className="flex items-center gap-8 p-8 h-full">
+                        <div className="flex-shrink-0">
+                          <div className="w-16 h-16 bg-accent border-2 border-foreground shadow-brutal-small flex items-center justify-center">
+                            <feature.icon className="w-8 h-8 text-accent-foreground" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-2xl font-bold mb-4 text-accent-foreground">{feature.title} Dashboard</h3>
+                          <div className="mb-4">
+                            {feature.uiPreview}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <RotateCcw className="w-4 h-4" />
+                            Click to go back
+                          </div>
                         </div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold mb-4 text-accent-foreground">{feature.title} Dashboard</h3>
-                        <div className="bg-background rounded border-2 border-foreground p-1 mb-4">
-                          {feature.uiPreview}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <RotateCcw className="w-4 h-4" />
-                          Click to go back
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  </div>
                 </div>
               </div>
             );
