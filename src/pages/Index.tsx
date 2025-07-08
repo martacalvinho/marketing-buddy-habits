@@ -242,7 +242,7 @@ const Index = () => {
           {FEATURES.map((feature, index) => {
             const isExpanded = expandedCard === index;
             return (
-              <div key={index} className="space-y-4 w-full max-w-sm flex-none">
+              <div key={index} className="space-y-4 w-full max-w-[320px] flex-none md:w-[calc(33.333%-1rem)]">
                 {/* Main Card */}
                 <Card 
                   className="bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 cursor-pointer hover:scale-105"
