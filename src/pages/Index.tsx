@@ -71,10 +71,10 @@ const Index = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {FEATURES.map((feature, index) => (
-            <Card key={index} className="bg-gradient-card border-0 shadow-soft hover:shadow-glow transition-all duration-300 animate-fade-in">
+            <Card key={index} className="bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 animate-fade-in">
               <CardHeader className="text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-2xl mb-4 mx-auto">
-                  <feature.icon className="w-6 h-6 text-primary" />
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-primary border-2 border-foreground shadow-brutal-small mb-4 mx-auto">
+                  <feature.icon className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <CardTitle className="text-xl">{feature.title}</CardTitle>
               </CardHeader>
@@ -96,7 +96,7 @@ const Index = () => {
               Ready to build your marketing habit?
             </h3>
             <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-              Join thousands of founders who've made marketing a consistent part of their routine
+              Founders who've made marketing a consistent part of their routines are more likely to succeed.
             </p>
             <Button size="lg" variant="secondary" className="text-lg px-8 py-6" asChild>
               <a href="/auth">Start Your Journey</a>
@@ -116,7 +116,7 @@ const Index = () => {
               <span className="font-semibold">Marketing Buddy</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 Marketing Buddy. Built for indie hackers.
+              © 2025 Marketing Buddy. Built for indie hackers.
             </p>
           </div>
         </div>
