@@ -238,8 +238,22 @@ export default function Dashboard() {
           
           // Update overall streak
           const today = new Date().toISOString().split('T')[0];
+          const lastActivity = new Date(profile.last_activity_date);
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          
+          let newStreak = profile.current_streak;
+          
           if (profile.last_activity_date !== today) {
-            const newStreak = profile.current_streak + 1;
+            // Check if last activity was yesterday (consecutive streak)
+            if (lastActivity.toDateString() === yesterday.toDateString()) {
+              // Consecutive day - increment streak
+              newStreak = profile.current_streak + 1;
+            } else if (lastActivity.toDateString() !== new Date().toDateString()) {
+              // Not consecutive - reset to 1
+              newStreak = 1;
+            }
+            
             await supabase
               .from('profiles')
               .update({
@@ -254,7 +268,7 @@ export default function Dashboard() {
       }
 
       toast({
-        title: task.completed ? "Task unmarked" : "Task completed! 🎉",
+        title: task.completed ? "Task unmarked" : "Task completed! ",
         description: task.completed ? "Task marked as incomplete" : "Great job! Keep up the streak!",
       });
 
@@ -284,7 +298,7 @@ export default function Dashboard() {
 
       if (data.success) {
         toast({
-          title: "Weekly Plan Generated! 🎯",
+          title: "Weekly Plan Generated! ",
           description: `Generated ${data.tasksGenerated} new tasks for next week`,
         });
         
@@ -312,23 +326,23 @@ export default function Dashboard() {
     
     // Day-specific messages
     if (dayOfWeek === 1) { // Monday
-      return "Happy Monday! Let's start the week strong. 💪";
+      return "Happy Monday! Let's start the week strong. ";
     } else if (dayOfWeek === 5) { // Friday
-      return "It's Friday! Let's finish the week with a win. 🎯";
+      return "It's Friday! Let's finish the week with a win. ";
     } else if (dayOfWeek === 0 || dayOfWeek === 6) { // Weekend
-      return "Weekend vibes! Perfect time for strategic planning. ✨";
+      return "Weekend vibes! Perfect time for strategic planning. ";
     }
     
     // Progress-based messages
     if (weekProgress >= 80) {
-      return `Amazing! You're ${weekProgress}% done with this week's tasks. 🔥`;
+      return `Amazing! You're ${weekProgress}% done with this week's tasks. `;
     } else if (weekProgress >= 50) {
-      return `Great progress! You're ${weekProgress}% through the week. Keep going! 📈`;
+      return `Great progress! You're ${weekProgress}% through the week. Keep going! `;
     } else if (weekProgress >= 20) {
-      return `You're ${weekProgress}% done this week. Building momentum! 🚀`;
+      return `You're ${weekProgress}% done this week. Building momentum! `;
     }
     
-    return `${currentDay} energy! Time to tackle those marketing tasks. 💼`;
+    return `${currentDay} energy! Time to tackle those marketing tasks. `;
   };
 
   // Update platform streak when completing tasks
@@ -458,11 +472,11 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center justify-center w-12 h-12 bg-gradient-primary rounded-xl shadow-lg">
-                <span className="text-lg font-bold text-primary-foreground">MB</span>
+                <span className="text-lg font-bold text-foreground">MB</span>
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{getDynamicMessage()}</h1>
-                <p className="text-sm text-muted-foreground font-medium">
+                <p className="text-sm text-foreground font-medium">
                   {profile.current_streak} day streak • {profile.goal}
                 </p>
               </div>
@@ -486,16 +500,16 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-8">
             {/* Progress Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border shadow-lg">
+              <Card className="bg-gradient-to-br from-background to-background border-2 border-foreground shadow-brutal">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    Current Streak
+                  <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
+                    <div className="w-2 h-2 bg-foreground rounded-full"></div>
+                    CURRENT STREAK
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-primary">{profile.current_streak} days</div>
-                  <p className="text-sm text-muted-foreground font-medium">Keep it going!</p>
+                  <div className="text-3xl font-black">{profile.current_streak} days</div>
+                  <p className="text-sm font-medium">Keep it going!</p>
                 </CardContent>
               </Card>
 
@@ -782,14 +796,14 @@ export default function Dashboard() {
                   platformStreaks.map((streak) => (
                     <div 
                       key={streak.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20"
+                      className="flex items-center justify-between p-3 rounded-lg border border-foreground/20 bg-background"
                     >
                       <div>
                         <span className="font-medium">{streak.platform}</span>
                         <p className="text-xs text-muted-foreground">Best: {streak.best_streak} days</p>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-primary">{streak.current_streak}</div>
+                        <div className="text-lg font-bold text-foreground">{streak.current_streak}</div>
                         <p className="text-xs text-muted-foreground">days</p>
                       </div>
                     </div>

@@ -119,7 +119,7 @@ Format your response as structured markdown with clear headings and bullet point
         'X-Title': 'Marketing Buddy Habits'
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
         messages: [
           {
             role: 'user',
