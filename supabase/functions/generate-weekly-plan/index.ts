@@ -142,7 +142,7 @@ Make tasks highly personalized based on their actual past performance and specif
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
         messages: [
           { 
             role: 'system', 

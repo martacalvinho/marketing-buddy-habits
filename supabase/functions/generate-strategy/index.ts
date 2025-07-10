@@ -73,7 +73,7 @@ IMPORTANT: Make all strategies and tasks highly specific to this business based 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-haiku',
+        model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
         messages: [
           { 
             role: 'system', 
