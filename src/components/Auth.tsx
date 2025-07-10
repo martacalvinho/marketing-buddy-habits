@@ -46,13 +46,18 @@ export default function Auth() {
         });
         
         // Check if user has completed onboarding
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('product_name')
           .eq('user_id', data.user.id)
-          .single();
+          .maybeSingle();
         
-        navigate(profile?.product_name ? '/dashboard' : '/onboarding');
+        // Navigate based on profile completion
+        if (profile?.product_name) {
+          navigate('/dashboard');
+        } else {
+          navigate('/onboarding');
+        }
       }
     } catch (error: any) {
       toast({

@@ -160,6 +160,42 @@ export type Database = {
           },
         ]
       }
+      website_analyses: {
+        Row: {
+          action_items: number | null
+          analysis_data: Json
+          analysis_topics: string[]
+          created_at: string
+          id: string
+          market_opportunities: number | null
+          updated_at: string
+          user_id: string
+          website_url: string
+        }
+        Insert: {
+          action_items?: number | null
+          analysis_data: Json
+          analysis_topics?: string[]
+          created_at?: string
+          id?: string
+          market_opportunities?: number | null
+          updated_at?: string
+          user_id: string
+          website_url: string
+        }
+        Update: {
+          action_items?: number | null
+          analysis_data?: Json
+          analysis_topics?: string[]
+          created_at?: string
+          id?: string
+          market_opportunities?: number | null
+          updated_at?: string
+          user_id?: string
+          website_url?: string
+        }
+        Relationships: []
+      }
       weekly_stats: {
         Row: {
           id: string
