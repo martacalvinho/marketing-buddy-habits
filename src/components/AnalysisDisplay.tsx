@@ -3,6 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
+import { 
   Target, 
   TrendingUp, 
   Lightbulb, 
@@ -36,7 +43,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
     icon: React.ReactNode,
     color: string = "border-foreground"
   ) => (
-    <Card className={`border-4 ${color} shadow-brutal`}>
+    <Card className={`border-4 ${color} shadow-brutal h-full`}>
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-black uppercase flex items-center gap-2">
           {icon}
@@ -60,6 +67,40 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       </CardContent>
     </Card>
   );
+
+  // Define all analysis sections with their icons and colors
+  const analysisSections = [
+    {
+      section: analysis.businessOverview,
+      icon: <Target className="w-5 h-5" />,
+      color: "border-blue-500"
+    },
+    {
+      section: analysis.marketingStrengths,
+      icon: <TrendingUp className="w-5 h-5" />,
+      color: "border-green-500"
+    },
+    {
+      section: analysis.marketingOpportunities,
+      icon: <Lightbulb className="w-5 h-5" />,
+      color: "border-yellow-500"
+    },
+    {
+      section: analysis.contentMessaging,
+      icon: <MessageSquare className="w-5 h-5" />,
+      color: "border-purple-500"
+    },
+    {
+      section: analysis.competitivePositioning,
+      icon: <Users className="w-5 h-5" />,
+      color: "border-orange-500"
+    },
+    {
+      section: analysis.actionableRecommendations,
+      icon: <CheckCircle className="w-5 h-5" />,
+      color: "border-red-500"
+    }
+  ];
 
   const renderKeyInsights = () => (
     <Card className="border-4 border-success shadow-brutal bg-success/5">
@@ -120,47 +161,36 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       {/* Key Insights - Top Priority */}
       {renderKeyInsights()}
       
-      {/* Main Analysis Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {renderSection(
-          analysis.businessOverview, 
-          <Target className="w-5 h-5" />,
-          "border-blue-500"
-        )}
+      {/* Analysis Sections Carousel */}
+      <div className="space-y-4">
+        <div className="text-center">
+          <h3 className="text-xl font-black uppercase mb-2">Detailed Analysis</h3>
+          <p className="text-sm text-muted-foreground font-medium">
+            Swipe through different analysis sections • {analysisSections.length} sections
+          </p>
+        </div>
         
-        {renderSection(
-          analysis.marketingStrengths, 
-          <TrendingUp className="w-5 h-5" />,
-          "border-green-500"
-        )}
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {renderSection(
-          analysis.marketingOpportunities, 
-          <Lightbulb className="w-5 h-5" />,
-          "border-yellow-500"
-        )}
-        
-        {renderSection(
-          analysis.contentMessaging, 
-          <MessageSquare className="w-5 h-5" />,
-          "border-purple-500"
-        )}
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {renderSection(
-          analysis.competitivePositioning, 
-          <Users className="w-5 h-5" />,
-          "border-orange-500"
-        )}
-        
-        {renderSection(
-          analysis.actionableRecommendations, 
-          <CheckCircle className="w-5 h-5" />,
-          "border-red-500"
-        )}
+        <div className="relative px-12">
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4">
+              {analysisSections.map((item, index) => (
+                <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                  <div className="h-96">
+                    {renderSection(item.section, item.icon, item.color)}
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="border-4 border-foreground shadow-brutal hover:shadow-brutal-hover bg-background" />
+            <CarouselNext className="border-4 border-foreground shadow-brutal hover:shadow-brutal-hover bg-background" />
+          </Carousel>
+        </div>
       </div>
     </div>
   );
