@@ -112,6 +112,7 @@ export type Database = {
           title: string
           user_approach: string | null
           user_id: string
+          website_analysis_id: string | null
           week_start_date: string
         }
         Insert: {
@@ -130,6 +131,7 @@ export type Database = {
           title: string
           user_approach?: string | null
           user_id: string
+          website_analysis_id?: string | null
           week_start_date: string
         }
         Update: {
@@ -148,6 +150,7 @@ export type Database = {
           title?: string
           user_approach?: string | null
           user_id?: string
+          website_analysis_id?: string | null
           week_start_date?: string
         }
         Relationships: [
@@ -156,6 +159,13 @@ export type Database = {
             columns: ["strategy_id"]
             isOneToOne: false
             referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_website_analysis_id_fkey"
+            columns: ["website_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "website_analyses"
             referencedColumns: ["id"]
           },
         ]

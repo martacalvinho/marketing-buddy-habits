@@ -9,9 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Check, Star, Users, PlayCircle, Clock, Target } from "lucide-react";
+import { Calendar, Check, Star, Users, PlayCircle, Clock, Target, Globe, TrendingUp } from "lucide-react";
+import WebsiteAnalysisStorage from "@/components/WebsiteAnalysisStorage";
 
 interface Profile {
   id: string;
@@ -38,6 +40,14 @@ interface Task {
   result_notes: string | null;
   ai_suggestion: string | null;
   week_start_date: string;
+  website_analysis_id: string | null;
+}
+
+interface WebsiteAnalysis {
+  id: string;
+  website_url: string;
+  analysis_data: any;
+  created_at: string;
 }
 
 interface WeeklyStat {
@@ -50,6 +60,8 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [weeklyStats, setWeeklyStats] = useState<WeeklyStat[]>([]);
+  const [websiteAnalyses, setWebsiteAnalyses] = useState<WebsiteAnalysis[]>([]);
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskApproach, setTaskApproach] = useState("");
   const [taskResult, setTaskResult] = useState("");
@@ -60,6 +72,13 @@ export default function Dashboard() {
   useEffect(() => {
     loadUserData();
   }, []);
+
+  // Reload tasks when website selection changes
+  useEffect(() => {
+    if (profile) {
+      loadTasksForWebsite();
+    }
+  }, [selectedWebsiteId]);
 
   const loadUserData = async () => {
     try {
@@ -83,18 +102,39 @@ export default function Dashboard() {
 
       setProfile(profileData);
 
-      // Load current week's tasks
+      // Load website analyses
+      const { data: analysesData } = await supabase
+        .from('website_analyses')
+        .select('id, website_url, analysis_data, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      const websiteAnalyses = analysesData || [];
+      setWebsiteAnalyses(websiteAnalyses);
+
+      // Set default selected website to the first one if available
+      if (websiteAnalyses.length > 0 && !selectedWebsiteId) {
+        setSelectedWebsiteId(websiteAnalyses[0].id);
+      }
+
+      // Load current week's tasks (filtered by selected website if available)
       const weekStart = new Date();
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const weekStartStr = weekStart.toISOString().split('T')[0];
 
-      const { data: tasksData } = await supabase
+      let tasksQuery = supabase
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
         .eq('week_start_date', weekStartStr)
         .order('created_at');
 
+      // Filter by selected website if one is selected
+      if (selectedWebsiteId) {
+        tasksQuery = tasksQuery.eq('website_analysis_id', selectedWebsiteId);
+      }
+
+      const { data: tasksData } = await tasksQuery;
       setTasks(tasksData || []);
 
       // Load weekly stats
@@ -115,6 +155,35 @@ export default function Dashboard() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadTasksForWebsite = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekStartStr = weekStart.toISOString().split('T')[0];
+
+      let tasksQuery = supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('week_start_date', weekStartStr)
+        .order('created_at');
+
+      // Filter by selected website if one is selected
+      if (selectedWebsiteId) {
+        tasksQuery = tasksQuery.eq('website_analysis_id', selectedWebsiteId);
+      }
+
+      const { data: tasksData } = await tasksQuery;
+      setTasks(tasksData || []);
+
+    } catch (error) {
+      console.error('Error loading tasks for website:', error);
     }
   };
 
@@ -170,6 +239,39 @@ export default function Dashboard() {
       toast({
         title: "Error",
         description: "Failed to update task",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const generateWeeklyPlan = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase.functions.invoke('generate-weekly-plan', {
+        body: { 
+          userId: user.id,
+          websiteAnalysisId: selectedWebsiteId 
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Weekly Plan Generated! 🎯",
+          description: `Generated ${data.tasksGenerated} new tasks for next week`,
+        });
+        
+        // Reload tasks to show the new ones
+        loadTasksForWebsite();
+      }
+    } catch (error) {
+      console.error('Error generating weekly plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate weekly plan",
         variant: "destructive",
       });
     }
@@ -300,6 +402,72 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Website Selector & Analysis Hub */}
+            <Card className="border-4 border-foreground shadow-brutal">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-black uppercase flex items-center gap-2">
+                    <Globe className="w-5 h-5" />
+                    Website Analysis Hub
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    {websiteAnalyses.length > 0 && (
+                      <Select 
+                        value={selectedWebsiteId || ""} 
+                        onValueChange={setSelectedWebsiteId}
+                      >
+                        <SelectTrigger className="w-64 border-4 border-foreground font-black uppercase">
+                          <SelectValue placeholder="Select Website" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="" className="font-black uppercase">All Websites</SelectItem>
+                          {websiteAnalyses.map((analysis) => (
+                            <SelectItem key={analysis.id} value={analysis.id} className="font-bold">
+                              {analysis.website_url}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+                <CardDescription className="font-bold uppercase tracking-wide">
+                  {selectedWebsiteId 
+                    ? `Tasks for ${websiteAnalyses.find(w => w.id === selectedWebsiteId)?.website_url || 'Selected Website'}`
+                    : `Managing ${websiteAnalyses.length} website${websiteAnalyses.length !== 1 ? 's' : ''}`
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="analyses" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 border-2 border-foreground">
+                    <TabsTrigger value="analyses" className="font-black uppercase">Website Analyses</TabsTrigger>
+                    <TabsTrigger value="new" className="font-black uppercase">New Analysis</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="analyses" className="mt-6">
+                    {profile && (
+                      <WebsiteAnalysisStorage userId={profile.user_id} />
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="new" className="mt-6">
+                    <div className="text-center py-8">
+                      <TrendingUp className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                      <div className="text-lg font-black uppercase mb-2">Start New Website Analysis</div>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Analyze a new website to generate personalized marketing tasks
+                      </p>
+                      <Button variant="hero" size="lg" className="font-black uppercase">
+                        <Globe className="w-4 h-4 mr-2" />
+                        Analyze Website
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
 
             {/* Tasks */}
             <Card className="border-4 border-foreground shadow-brutal">
@@ -459,7 +627,15 @@ export default function Dashboard() {
                 <CardTitle className="text-lg font-black uppercase">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="hero" className="w-full justify-start font-black uppercase" asChild>
+                <Button 
+                  variant="hero" 
+                  className="w-full justify-start font-black uppercase"
+                  onClick={generateWeeklyPlan}
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Generate Weekly Plan
+                </Button>
+                <Button variant="outline" className="w-full justify-start font-black uppercase" asChild>
                   <a href="/experiments">
                     <Star className="w-4 h-4 mr-2" />
                     Start Experiment

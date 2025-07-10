@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { analysis, userGoal, productType, platforms } = await req.json();
+    const { analysis, userGoal, productType, platforms, websiteAnalysisId } = await req.json();
 
     if (!analysis || !userGoal) {
       throw new Error('Analysis and user goal are required');
@@ -121,7 +121,8 @@ IMPORTANT: Make all strategies and tasks highly specific to this business based 
 
     return new Response(JSON.stringify({ 
       success: true, 
-      strategy 
+      strategy,
+      websiteAnalysisId: websiteAnalysisId || null
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
