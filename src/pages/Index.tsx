@@ -220,8 +220,52 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10">
+      {/* Navigation Bar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-foreground/10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo and Title */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center border-2 border-foreground shadow-brutal-small">
+                <span className="text-lg font-black text-primary-foreground">MB</span>
+              </div>
+              <span className="text-xl font-black">Marketing Buddy</span>
+            </div>
+            
+            {/* Navigation Links */}
+            <div className="hidden md:flex items-center gap-8">
+              <a 
+                href="#features" 
+                className="text-sm font-bold uppercase tracking-wide hover:text-primary transition-colors duration-200"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                Features
+              </a>
+              <a 
+                href="#pricing" 
+                className="text-sm font-bold uppercase tracking-wide hover:text-primary transition-colors duration-200"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                Pricing
+              </a>
+            </div>
+            
+            {/* Login Button */}
+            <Button variant="outline" className="font-bold border-2 border-foreground shadow-brutal-small hover:shadow-brutal-hover" asChild>
+              <a href="/auth">Login</a>
+            </Button>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
+      <section className="container mx-auto px-4 py-20 pt-32">{/* Added pt-32 for nav spacing */}
         <div className="text-center max-w-5xl mx-auto">
           <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-primary rounded-3xl mb-8 shadow-glow animate-pulse-glow border-4 border-foreground">
             <span className="text-4xl font-black text-primary-foreground">MB</span>
@@ -259,7 +303,7 @@ const Index = () => {
       </section>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-20">
+      <section id="features" className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Everything you need to stay consistent
@@ -336,7 +380,7 @@ const Index = () => {
       </section>
 
       {/* Pricing Section */}
-      <section className="container mx-auto px-4 py-20">
+      <section id="pricing" className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Simple, transparent pricing
