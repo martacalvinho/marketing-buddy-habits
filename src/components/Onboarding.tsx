@@ -149,6 +149,15 @@ export default function Onboarding() {
 
       if (profileError) throw profileError;
 
+      // Save website analysis to website_analyses table
+      if (formData.websiteAnalysis) {
+        await supabase.from('website_analyses').insert({
+          user_id: user.id,
+          website_url: formData.websiteUrl,
+          analysis_data: formData.websiteAnalysis,
+        });
+      }
+
       // Generate strategies and tasks based on analysis
       if (formData.websiteAnalysis) {
         try {
