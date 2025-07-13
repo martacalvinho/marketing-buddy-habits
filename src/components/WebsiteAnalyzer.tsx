@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 interface WebsiteAnalyzerProps {
-  onAnalysisComplete: (analysis: string) => void;
+  onAnalysisComplete: (analysis: string, keyInsights?: any, websiteUrl?: string) => void;
 }
 
 export default function WebsiteAnalyzer({ onAnalysisComplete }: WebsiteAnalyzerProps) {
@@ -40,7 +40,8 @@ export default function WebsiteAnalyzer({ onAnalysisComplete }: WebsiteAnalyzerP
 
       if (data.success) {
         setAnalysis(data.analysis);
-        onAnalysisComplete(data.analysis);
+        // Pass analysis, keyInsights, and websiteUrl to parent
+        onAnalysisComplete(data.analysis, data.keyInsights, websiteUrl);
         
         // Save analysis to database
         await saveAnalysisToDatabase(data.analysis);

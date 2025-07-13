@@ -23,15 +23,24 @@ import { renderBoldText } from '@/utils/textFormat';
 
 interface AnalysisDisplayProps {
   analysisText: string;
-  onSaveToTasks?: (opportunities: string[], recommendations: string[]) => void;
+  keyInsights?: string[]; // Array of 6 concise bullet points
+  onSaveToTasks?: (tasks: string[]) => void;
 }
 
 const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ 
   analysisText, 
+  keyInsights,
   onSaveToTasks 
 }) => {
   const analysis = parseAnalysisMarkdown(analysisText);
-  const { opportunities, recommendations } = extractKeyInsights(analysis);
+  
+  // Use keyInsights from backend if provided (array of 6 bullets), else fallback to local extraction
+  const displayInsights = keyInsights && Array.isArray(keyInsights) && keyInsights.length > 0
+    ? keyInsights
+    : (() => {
+        const { opportunities, recommendations } = extractKeyInsights(analysis);
+        return [...opportunities, ...recommendations];
+      })();
   
   // Track the current section index
   const [currentSectionIndex, setCurrentSectionIndex] = React.useState(0);
@@ -72,7 +81,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 
   const handleSaveToTasks = () => {
     if (onSaveToTasks) {
-      onSaveToTasks(opportunities, recommendations);
+      onSaveToTasks(displayInsights);
     }
   };
 
@@ -152,9 +161,6 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       .filter(line => line.match(/^\d+\.\s+\*\*[^*]+\*\*/))
       .map(line => line.replace(/^\d+\.\s+\*\*|\*\*/g, '').trim()) || [];
     
-    // Combine with existing recommendations
-    const allActionItems = [...new Set([...recommendations, ...mainCategories])].filter(Boolean);
-
     return (
       <Card className="border-4 border-success shadow-brutal bg-success/5">
         <CardHeader className="pb-4">
@@ -167,31 +173,31 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-black text-sm uppercase mb-3 text-success">
-                Market Opportunities ({opportunities.length})
+                MARKET OPPORTUNITIES (3)
               </h4>
               <ul className="space-y-2">
-                {opportunities.slice(0, 5).map((opportunity, index) => (
-                  <li key={`opp-${index}`} className="text-sm font-medium">
-                    {opportunity}
+                {displayInsights.slice(0, 3).map((insight, index) => (
+                  <li key={`insight-${index}`} className="text-sm font-medium">
+                    {insight}
                   </li>
                 ))}
               </ul>
             </div>
             <div>
               <h4 className="font-black text-sm uppercase mb-3 text-success">
-                Action Items ({allActionItems.length})
+                ACTION ITEMS (3)
               </h4>
               <ul className="space-y-2">
-                {allActionItems.slice(0, 8).map((item, index) => (
+                {displayInsights.slice(3, 6).map((insight, index) => (
                   <li key={`action-${index}`} className="text-sm font-medium">
-                    {item}
+                    {insight}
                   </li>
                 ))}
               </ul>
             </div>
           </div>
           
-          {onSaveToTasks && (opportunities.length > 0 || allActionItems.length > 0) && (
+          {onSaveToTasks && displayInsights.length > 0 && (
             <div className="pt-4 border-t-2 border-success">
               <Button 
                 onClick={handleSaveToTasks}

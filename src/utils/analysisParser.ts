@@ -63,41 +63,51 @@ export function extractKeyInsights(analysis: ParsedAnalysis): {
   opportunities: string[];
   recommendations: string[];
 } {
-  const opportunities: string[] = [];
-  const recommendations: string[] = [];
-  
-  // Extract bullet points from opportunities
-  const opportunityContent = analysis.marketingOpportunities.content;
-  const opportunityMatches = opportunityContent.match(/^[-•]\s+(.+)$/gm);
-  if (opportunityMatches) {
-    opportunities.push(...opportunityMatches.map(match => match.replace(/^[-•]\s+/, '').trim()));
-  }
-  
-  // Extract bullet points from recommendations
-  const recommendationContent = analysis.actionableRecommendations.content;
-  const recommendationMatches = recommendationContent.match(/^[-•]\s+(.+)$/gm);
-  if (recommendationMatches) {
-    recommendations.push(...recommendationMatches.map(match => match.replace(/^[-•]\s+/, '').trim()));
-  }
-  
-  // Also check subsections
+  // Helper to clean up asterisks and markdown artifacts
+  const clean = (text: string) => text.replace(/^[*-]\s+/gm, '').replace(/\*/g, '').replace(/`+/g, '').replace(/_/g, '').trim();
+
+  const actionableKeywords = [
+    'increase', 'improve', 'add', 'reduce', 'optimize', 'opportunity', 'recommend', 'should', 'suggest', 'consider', 'enhance', 'expand', 'create', 'develop', 'implement', 'focus', 'grow', 'boost', 'leverage', 'prioritize', 'address', 'achieve', 'drive', 'generate', 'launch', 'build', 'strengthen', 'clarify', 'highlight', 'maximize', 'minimize', 'update', 'test', 'experiment', 'measure', 'track', 'analyze', 'remove', 'fix', 'avoid', 'prevent'
+  ];
+
+  const extractOrSummarize = (content: string): string[] => {
+    // Remove markdown and asterisks, split into sentences
+    const sentences = clean(content)
+      .split(/[.!?\n\r]+/)
+      .map(s => s.trim())
+      .filter(s => s && !/^[-•*#]/.test(s) && s.length > 8 && !/^key (value|insight|recommendation|opportunit)/i.test(s));
+
+    // Prefer actionable sentences
+    let summary = sentences.filter(s => actionableKeywords.some(k => s.toLowerCase().includes(k)));
+    // If not enough, add other non-title sentences
+    if (summary.length < 3) {
+      const more = sentences.filter(s => !summary.includes(s));
+      summary = summary.concat(more);
+    }
+    // Ensure exactly 3 items
+    while (summary.length < 3) summary.push('No additional insight');
+    return summary.slice(0, 3);
+  };
+
+  // Marketing Opportunities
+  let opportunities: string[] = extractOrSummarize(analysis.marketingOpportunities.content);
   if (analysis.marketingOpportunities.subsections) {
-    analysis.marketingOpportunities.subsections.forEach(sub => {
-      const matches = sub.content.match(/^[-•]\s+(.+)$/gm);
-      if (matches) {
-        opportunities.push(...matches.map(match => match.replace(/^[-•]\s+/, '').trim()));
-      }
-    });
+    for (const sub of analysis.marketingOpportunities.subsections) {
+      const subBullets = extractOrSummarize(sub.content);
+      opportunities = opportunities.concat(subBullets).slice(0, 3);
+      if (opportunities.length >= 3) break;
+    }
   }
-  
+
+  // Actionable Recommendations
+  let recommendations: string[] = extractOrSummarize(analysis.actionableRecommendations.content);
   if (analysis.actionableRecommendations.subsections) {
-    analysis.actionableRecommendations.subsections.forEach(sub => {
-      const matches = sub.content.match(/^[-•]\s+(.+)$/gm);
-      if (matches) {
-        recommendations.push(...matches.map(match => match.replace(/^[-•]\s+/, '').trim()));
-      }
-    });
+    for (const sub of analysis.actionableRecommendations.subsections) {
+      const subBullets = extractOrSummarize(sub.content);
+      recommendations = recommendations.concat(subBullets).slice(0, 3);
+      if (recommendations.length >= 3) break;
+    }
   }
-  
+
   return { opportunities, recommendations };
 }

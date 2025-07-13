@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import WebsiteAnalyzer from "./WebsiteAnalyzer";
+import AnalysisDisplay from "./AnalysisDisplay";
+import { MARKETING_STRATEGIES } from "./EnhancedStrategyLibrary";
 
 const PRODUCT_TYPES = [
   { id: "saas", label: "SaaS", description: "Software as a Service product" },
@@ -39,7 +41,9 @@ export default function Onboarding() {
     websiteUrl: "",
     goal: "",
     platforms: [] as string[],
-    websiteAnalysis: null as any
+    selectedStrategy: "",
+    websiteAnalysis: null as any,
+    keyInsights: null as any
   });
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -100,7 +104,7 @@ export default function Onboarding() {
     checkAuth();
   }, [navigate, toast]);
 
-  const progress = (step / 4) * 100;
+  const progress = (step / 5) * 100;
 
   const handlePlatformChange = (platformId: string, checked: boolean) => {
     if (checked) {
@@ -110,8 +114,19 @@ export default function Onboarding() {
     }
   };
 
-  const handleAnalysisComplete = (analysis: any) => {
-    setFormData(prev => ({ ...prev, websiteAnalysis: analysis }));
+  const handleAnalysisComplete = (analysis: any, keyInsights?: any, websiteUrl?: string) => {
+    // Store analysis, keyInsights, and websiteUrl
+    setFormData(prev => ({ 
+      ...prev, 
+      websiteAnalysis: analysis, 
+      keyInsights,
+      websiteUrl: websiteUrl || prev.websiteUrl 
+    }));
+  };
+
+  const handleSaveToTasks = (tasks: any[]) => {
+    // This will be implemented when we add task saving functionality
+    console.log('Tasks to save:', tasks);
   };
 
   const handleComplete = async () => {
@@ -129,7 +144,36 @@ export default function Onboarding() {
         return;
       }
 
-      // Save profile data - use upsert with onConflict to handle existing profiles
+      // Get the actual strategy ID from the strategies table
+      let strategyId = null;
+      if (formData.selectedStrategy) {
+        // If it's already a UUID, use it directly
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(formData.selectedStrategy)) {
+          strategyId = formData.selectedStrategy;
+        } else {
+          // Otherwise, try to find a matching strategy by name in the local MARKETING_STRATEGIES
+          const matchingStrategy = MARKETING_STRATEGIES.find(s => s.id === formData.selectedStrategy);
+          
+          if (matchingStrategy) {
+            // If we found a matching strategy, look it up in the database by name
+            const { data: strategy } = await supabase
+              .from('strategies')
+              .select('id')
+              .eq('name', matchingStrategy.name)
+              .single();
+            
+            if (strategy) {
+              strategyId = strategy.id;
+            } else {
+              console.warn(`No matching strategy found in database for: ${formData.selectedStrategy}`);
+            }
+          } else {
+            console.warn(`No matching strategy found in MARKETING_STRATEGIES for: ${formData.selectedStrategy}`);
+          }
+        }
+      }
+
+      // Save profile data with selected_strategy_id
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -140,7 +184,7 @@ export default function Onboarding() {
           product_type: formData.productType,
           goal: formData.goal,
           platforms: formData.platforms,
-          website_analysis: formData.websiteAnalysis,
+          selected_strategy_id: strategyId,
           current_streak: 0,
           last_activity_date: new Date().toISOString().split('T')[0]
         }, {
@@ -156,6 +200,21 @@ export default function Onboarding() {
           website_url: formData.websiteUrl,
           analysis_data: formData.websiteAnalysis,
         });
+        // Save each analysis section to analysis_sections table
+        try {
+          console.log('Saving analysis sections for user:', user.id, 'URL:', formData.websiteUrl);
+          // Dynamically import parser and saver
+          const { parseAnalysisMarkdown } = await import('@/utils/analysisParser');
+          const { saveAnalysisSections } = await import('@/utils/saveAnalysisSections');
+          const parsed = parseAnalysisMarkdown(formData.websiteAnalysis);
+          console.log('Parsed analysis sections:', Object.keys(parsed));
+          await saveAnalysisSections(user.id, formData.websiteUrl || '', parsed);
+          console.log('Successfully saved analysis sections to database');
+        } catch (sectionSaveError) {
+          console.error('Failed to save analysis sections:', sectionSaveError);
+          // Don't throw - continue with onboarding even if section saving fails
+        }
+      
       }
 
       // Generate strategies and tasks based on analysis
@@ -243,6 +302,7 @@ export default function Onboarding() {
       case 2: return "What's your website?";
       case 3: return "What's your goal?";
       case 4: return "Where are you active?";
+      case 5: return "Choose your strategy";
       default: return "";
     }
   };
@@ -253,6 +313,7 @@ export default function Onboarding() {
       case 2: return "Let's analyze your website to understand your product better";
       case 3: return "What would you like to achieve?";
       case 4: return "Select the platforms you use or want to use";
+      case 5: return "Pick ONE strategy to focus on this week";
       default: return "";
     }
   };
@@ -273,7 +334,7 @@ export default function Onboarding() {
         <div className="mb-8">
           <Progress value={progress} className="w-full h-4 border-2 border-foreground" />
           <p className="text-sm font-bold mt-2 text-center uppercase tracking-wide">
-            Step {step} of 4
+            Step {step} of 5
           </p>
         </div>
 
@@ -355,6 +416,40 @@ export default function Onboarding() {
               </div>
             )}
 
+            {step === 5 && (
+              <div className="space-y-4">
+                <p className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                  Choose the marketing strategy you want to focus on this week. You can change this later.
+                </p>
+                <div className="grid gap-3">
+                  {MARKETING_STRATEGIES.map((strategy) => (
+                    <div 
+                      key={strategy.id} 
+                      className={`p-4 border-2 cursor-pointer transition-colors ${
+                        formData.selectedStrategy === strategy.id 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-foreground bg-background hover:border-primary/50'
+                      }`}
+                      onClick={() => setFormData(prev => ({ ...prev, selectedStrategy: strategy.id }))}
+                    >
+                      <div>
+                        <h3 className="font-bold text-base uppercase">{strategy.name}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">{strategy.description}</p>
+                        <div className="flex gap-2 mt-2">
+                          <span className="text-xs px-2 py-1 bg-secondary rounded font-medium">
+                            {strategy.category}
+                          </span>
+                          <span className="text-xs px-2 py-1 bg-secondary rounded font-medium">
+                            {strategy.difficulty}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between pt-6">
               {step > 1 ? (
                 <Button variant="outline" onClick={prevStep} className="font-black uppercase">
@@ -364,13 +459,14 @@ export default function Onboarding() {
                 <div />
               )}
               
-              {step < 4 ? (
+              {step < 5 ? (
                 <Button 
                   onClick={nextStep}
                   disabled={
                     (step === 1 && (!formData.productType || !formData.productName)) ||
                     (step === 2 && !formData.websiteAnalysis) ||
-                    (step === 3 && !formData.goal)
+                    (step === 3 && !formData.goal) ||
+                    (step === 4 && formData.platforms.length === 0)
                   }
                   variant="hero"
                   className="font-black uppercase"
@@ -380,7 +476,7 @@ export default function Onboarding() {
               ) : (
                 <Button 
                   onClick={handleComplete}
-                  disabled={formData.platforms.length === 0 || isLoading}
+                  disabled={!formData.selectedStrategy || isLoading}
                   variant="hero"
                   className="font-black uppercase"
                 >

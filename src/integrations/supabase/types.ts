@@ -54,10 +54,16 @@ export type Database = {
           email: string | null
           goal: string | null
           id: string
+          is_premium: boolean | null
           last_activity_date: string | null
           platforms: string[] | null
           product_name: string | null
           product_type: string | null
+          subscription_ends_at: string | null
+          subscription_id: string | null
+          subscription_status: string | null
+          total_tasks_completed: number | null
+          trial_ends_at: string | null
           updated_at: string
           user_id: string
           website_analysis: Json | null
@@ -69,10 +75,16 @@ export type Database = {
           email?: string | null
           goal?: string | null
           id?: string
+          is_premium?: boolean | null
           last_activity_date?: string | null
           platforms?: string[] | null
           product_name?: string | null
           product_type?: string | null
+          subscription_ends_at?: string | null
+          subscription_id?: string | null
+          subscription_status?: string | null
+          total_tasks_completed?: number | null
+          trial_ends_at?: string | null
           updated_at?: string
           user_id: string
           website_analysis?: Json | null
@@ -84,10 +96,16 @@ export type Database = {
           email?: string | null
           goal?: string | null
           id?: string
+          is_premium?: boolean | null
           last_activity_date?: string | null
           platforms?: string[] | null
           product_name?: string | null
           product_type?: string | null
+          subscription_ends_at?: string | null
+          subscription_id?: string | null
+          subscription_status?: string | null
+          total_tasks_completed?: number | null
+          trial_ends_at?: string | null
           updated_at?: string
           user_id?: string
           website_analysis?: Json | null

@@ -167,47 +167,37 @@ const FEATURES = [
 
 const PRICING_PLANS = [
   {
-    name: "Starter",
-    price: "$9",
+    name: "Basic",
+    price: "$8",
     period: "per month",
+    originalPrice: "$16",
     features: [
-      "Website analysis",
-      "5 daily tasks per week",
-      "Basic streak tracking",
+      "AI website analysis",
+      "Weekly personalized tasks",
       "Strategy library access",
-      "Community support"
+      "Basic streak tracking",
+      "Email support"
     ],
-    cta: "Start Starter Plan",
-    popular: false
+    cta: "Start Basic Plan",
+    popular: false,
+    trial: "7-day free trial"
   },
   {
     name: "Pro",
     price: "$18",
     period: "per month",
+    originalPrice: "$36",
     features: [
-      "Everything in Starter",
-      "Unlimited daily tasks",
-      "Strategy library access & edit",
+      "Everything in Basic",
+      "AI content generator",
+      "Advanced analytics",
       "Campaign tracking",
-      "Priority support"
+      "Priority support",
+      "Custom strategies"
     ],
     cta: "Start Pro Plan",
-    popular: true
-  },
-  {
-    name: "Teams",
-    price: "$32",
-    period: "per month",
-    features: [
-      "Everything in Pro",
-      "Team collaboration",
-      "Custom strategies",
-      "Dedicated support",
-      "Advanced analytics"
-    ],
-    cta: "Coming Soon",
-    popular: false,
-    disabled: true
+    popular: true,
+    trial: "7-day free trial"
   }
 ];
 
@@ -283,16 +273,35 @@ const Index = () => {
             </span>
           </h1>
           
-          <p className="text-2xl md:text-3xl font-bold text-muted-foreground mb-4 max-w-3xl mx-auto">
+          <p className="text-2xl md:text-3xl font-bold text-muted-foreground mb-8 max-w-3xl mx-auto">
             The AI-powered marketing companion that turns overwhelmed founders into consistent marketers
           </p>
           
 
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-20">
             <Button size="lg" variant="hero" className="text-xl font-black uppercase px-12 py-8 border-4 border-foreground shadow-brutal hover:shadow-brutal-hover" asChild>
               <a href="/auth">Start Building Habits</a>
             </Button>
+          </div>
+
+          {/* Dashboard Screenshot Preview */}
+          <div className="w-full flex flex-col items-center py-12 px-4 bg-background/80 border-4 border-foreground shadow-brutal rounded-2xl max-w-5xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-black uppercase mb-6 tracking-tight">See the Real Dashboard</h2>
+            <div className="rounded-xl overflow-hidden border-4 border-foreground shadow-brutal w-full mb-4">
+              <img
+                src="/dashboard-placeholder.png"
+                alt="Marketing Buddy Dashboard Preview"
+                className="w-full h-auto object-cover bg-muted"
+                style={{ minHeight: 320, background: '#f3f4f6' }}
+              />
+            </div>
+            <div className="text-muted-foreground text-sm font-bold uppercase tracking-wide">
+              Actual dashboard UI – simple, focused, and actionable
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Button size="lg" variant="outline" className="text-xl font-black uppercase px-12 py-8 border-4 border-foreground shadow-brutal hover:shadow-brutal-hover">
               See How It Works
             </Button>
@@ -383,48 +392,68 @@ const Index = () => {
       <section id="pricing" className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Simple, transparent pricing
+            Start Your Marketing Journey Today
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose the plan that fits your marketing journey
+            Try premium features free for 7 days, then choose your plan
           </p>
+          <div className="mt-6 inline-flex items-center gap-2 bg-green-100 border-2 border-green-500 px-4 py-2 rounded-lg">
+            <Star className="w-5 h-5 text-green-600" />
+            <span className="font-bold text-green-800">7-Day Free Trial • No Credit Card Required</span>
+          </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {PRICING_PLANS.map((plan, index) => (
-            <Card key={index} className={`bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 relative ${plan.popular ? 'scale-105' : ''}`}>
+            <Card key={index} className={`bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 relative ${plan.popular ? 'scale-105 border-purple-500' : ''}`}>
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-accent text-accent-foreground px-4 py-2 border-2 border-foreground shadow-brutal-small text-sm font-bold uppercase tracking-wide">
-                    Most Popular
+                  <div className="bg-purple-500 text-white px-4 py-2 border-2 border-foreground shadow-brutal-small text-sm font-bold uppercase tracking-wide">
+                    🚀 Most Popular
                   </div>
                 </div>
               )}
               <CardHeader className="text-center">
+                <div className="mb-2">
+                  <span className="inline-block bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded border border-green-300">
+                    {plan.trial}
+                  </span>
+                </div>
                 <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
-                <div className="flex items-baseline justify-center gap-1 mt-4">
-                  <span className="text-4xl font-bold">{plan.price}</span>
+                <div className="flex items-baseline justify-center gap-2 mt-4">
+                  {plan.originalPrice && (
+                    <span className="text-lg text-muted-foreground line-through">{plan.originalPrice}</span>
+                  )}
+                  <span className="text-4xl font-bold text-purple-600">{plan.price}</span>
                   <span className="text-muted-foreground">/{plan.period}</span>
                 </div>
+                {plan.originalPrice && (
+                  <div className="text-sm text-green-600 font-semibold mt-1">
+                    Save 50% - Limited Time!
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <ul className="space-y-3">
                   {plan.features.map((feature, featureIndex) => (
                     <li key={featureIndex} className="flex items-center gap-3">
                       <Check className="w-5 h-5 text-success flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
+                      <span className="text-sm font-medium">{feature}</span>
                     </li>
                   ))}
                 </ul>
-                <Button 
-                  className="w-full mt-6" 
-                  variant={plan.popular ? "default" : "outline"}
-                  size="lg"
-                  disabled={plan.disabled}
-                  {...(plan.disabled ? {} : { asChild: true })}
-                >
-                  {plan.disabled ? plan.cta : <a href="/auth">{plan.cta}</a>}
-                </Button>
+                <div className="pt-4">
+                  <Button 
+                    className={`w-full font-bold text-lg py-6 ${plan.popular ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600' : 'bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600'}`}
+                    size="lg"
+                    asChild
+                  >
+                    <a href="/auth">Start Free Trial</a>
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground mt-2">
+                    Cancel anytime • No commitment
+                  </p>
+                </div>
               </CardContent>
             </Card>
           ))}

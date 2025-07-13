@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,12 +10,29 @@ import { useNavigate } from "react-router-dom";
 import { Mail } from "lucide-react";
 
 export default function Auth() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Auto-redirect if user already logged in
+  useEffect(() => {
+    const checkLoggedIn = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // check profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('product_name')
+          .eq('user_id', session.user.id)
+          .single();
+        navigate(profile?.product_name ? '/dashboard' : '/onboarding');
+      }
+    };
+    checkLoggedIn();
+  }, [navigate]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent, isSignUp: boolean) => {
     e.preventDefault();

@@ -33,7 +33,7 @@ serve(async (req) => {
     // Get user profile and goal
     const { data: profile } = await supabase
       .from('profiles')
-      .select('goal, product_type, product_name, platforms')
+      .select('goal, product_type, product_name, platforms, selected_strategy')
       .eq('user_id', userId)
       .single();
 
@@ -75,61 +75,110 @@ serve(async (req) => {
     nextWeekStart.setDate(nextWeekStart.getDate() - nextWeekStart.getDay() + 7); // Next Monday
     const nextWeekStartStr = nextWeekStart.toISOString().split('T')[0];
 
-    const weeklyPlanPrompt = `You are a marketing assistant helping a user plan their next week based on their past performance and goals.
+    // Calculate completion rate and identify patterns
+    const completedTasks = pastTasks?.filter(task => task.completed) || [];
+    const incompleteTasks = pastTasks?.filter(task => !task.completed) || [];
+    const completionRate = pastTasks?.length ? (completedTasks.length / pastTasks.length * 100).toFixed(1) : '0';
+    
+    // Analyze category performance
+    const categoryPerformance = pastTasks?.reduce((acc, task) => {
+      if (!acc[task.category]) {
+        acc[task.category] = { total: 0, completed: 0 };
+      }
+      acc[task.category].total++;
+      if (task.completed) acc[task.category].completed++;
+      return acc;
+    }, {} as Record<string, { total: number; completed: number }>) || {};
 
-=== USER CONTEXT ===
+    const weeklyPlanPrompt = `You are an intelligent marketing assistant that learns from user behavior to generate highly personalized weekly plans.
+
+=== USER PROFILE ===
 Goal: ${profile?.goal || 'Not specified'}
 Product Type: ${profile?.product_type || 'Not specified'}
 Product Name: ${profile?.product_name || 'Not specified'}
 Active Platforms: ${profile?.platforms?.join(', ') || 'Not specified'}
+Selected Marketing Strategy: ${profile?.selected_strategy || 'Not specified'}
 
-=== PAST WEEK'S PERFORMANCE ===
+=== PERFORMANCE ANALYTICS ===
+Overall Completion Rate: ${completionRate}%
+Total Tasks Last Week: ${pastTasks?.length || 0}
+Completed: ${completedTasks.length}
+Incomplete: ${incompleteTasks.length}
+
+Category Performance:
+${Object.entries(categoryPerformance).map(([category, stats]) => 
+  `${category}: ${(stats as any).completed}/${(stats as any).total} (${((stats as any).completed/(stats as any).total*100).toFixed(1)}%)`
+).join('\n')}
+
+=== DETAILED TASK ANALYSIS ===
 ${pastTasks?.length ? 
   pastTasks.map(task => `
-  Task: ${task.title}
-  Category: ${task.category}
-  Priority: ${task.priority}
-  Completed: ${task.completed ? 'Yes' : 'No'}
-  User Approach: ${task.user_approach || 'Not recorded'}
-  Results & Notes: ${task.result_notes || 'Not recorded'}
+📋 Task: ${task.title}
+   Category: ${task.category} | Priority: ${task.priority}
+   Status: ${task.completed ? '✅ COMPLETED' : '❌ INCOMPLETE'}
+   User's Approach: ${task.user_approach || 'Not documented'}
+   Results & Learning: ${task.result_notes || 'No notes provided'}
+   Time Spent: ${task.time_spent || 'Not tracked'}
   `).join('\n') 
-  : 'No past tasks available'}
+  : 'No historical data available - this is likely a new user'}
 
-=== WEBSITE ANALYSIS CONTEXT ===
+=== WEBSITE CONTEXT ===
 ${websiteAnalysis ? 
-  `Website: ${websiteAnalysis.website_url}
-   Analysis Data: ${JSON.stringify(websiteAnalysis.analysis_data, null, 2)}`
-  : 'No specific website analysis provided'}
+  `🌐 Website: ${(websiteAnalysis as any).website_url}
+📊 Analysis Insights: ${typeof (websiteAnalysis as any).analysis_data === 'string' ? (websiteAnalysis as any).analysis_data : JSON.stringify((websiteAnalysis as any).analysis_data, null, 2)}`
+  : 'No website analysis available'}
 
-=== INSTRUCTIONS ===
-Based on the user's past performance, goals, and website analysis:
+=== ADAPTIVE PLANNING INSTRUCTIONS ===
+As an intelligent assistant, analyze the user's patterns and generate a personalized plan:
 
-1. Analyze what worked well and what didn't based on completed vs incomplete tasks
-2. Review the user's notes and results to understand their strengths and challenges
-3. Consider the website analysis to identify specific opportunities
-4. Generate 5-7 strategic tasks for next week that:
-   - Build on successful patterns from past performance
-   - Address gaps or incomplete areas
-   - Are specific to their business and website
-   - Progress toward their overall goal
-   - Vary in difficulty and time commitment
+🧠 BEHAVIORAL ANALYSIS:
+1. Identify which task categories the user excels at vs struggles with
+2. Note patterns in their approach and results documentation
+3. Recognize time management patterns and preferences
+4. Understand what motivates them based on completed tasks
+
+🎯 ADAPTIVE STRATEGY:
+1. **Build on Strengths**: More tasks in categories where they have high completion rates
+2. **Address Weaknesses**: Smaller, easier tasks in struggling categories to build confidence
+3. **Learn from Notes**: Incorporate insights from their results and approaches
+4. **Progressive Difficulty**: Match task complexity to their demonstrated capabilities
+5. **Personalized Timing**: Suggest time estimates based on their past performance
+6. **Strategy Alignment**: ALL tasks must align with their selected marketing strategy and support its execution
+
+🎯 STRATEGY-FOCUSED BRIEF:
+The user has selected "${profile?.selected_strategy || 'Not specified'}" as their primary marketing strategy. This week's tasks should:
+- Directly support and advance this specific marketing strategy
+- Build upon the website analysis insights to create relevant, actionable tasks
+- Form a coherent weekly plan that moves the strategy forward step-by-step
+- Reference specific opportunities identified in their website analysis
+- Consider their business context and past performance within this strategy focus
+
+📋 TASK GENERATION RULES:
+- Generate 5-7 tasks that feel personally relevant
+- Reference their specific business/website in task descriptions
+- Include variety but emphasize their successful patterns
+- Make tasks specific and actionable, not generic
+- Consider their goal and current business stage
 
 Respond with JSON only:
 {
   "weeklyTasks": [
     {
-      "title": "Specific, actionable task title",
-      "description": "Detailed description referencing past performance or website insights",
-      "category": "SEO/Social/Email/Content/Analytics/etc",
+      "title": "Specific task referencing their business/website",
+      "description": "Detailed description that shows you understand their context and past performance",
+      "category": "SEO/Social/Email/Content/Analytics/PaidAds/Networking/etc",
       "priority": "high/medium/low",
-      "estimatedTime": "15 minutes to 3 hours",
-      "aiSuggestion": "Strategic advice based on their past performance and current opportunities"
+      "estimatedTime": "Realistic estimate based on their past performance",
+      "aiSuggestion": "Personalized advice referencing their strengths, challenges, or past results",
+      "adaptiveReason": "Brief explanation of why this task was chosen based on their patterns"
     }
   ],
   "weeklyInsights": {
-    "performanceAnalysis": "Brief analysis of what worked well last week",
-    "focusAreas": "Key areas to focus on this week",
-    "suggestedStrategy": "One recommended strategy based on their current state"
+    "performanceAnalysis": "Specific analysis of their strengths and improvement areas based on data",
+    "behavioralPatterns": "Insights about their work style and preferences",
+    "focusAreas": "Strategic areas to prioritize this week based on their goals and performance",
+    "motivationalNote": "Encouraging message that acknowledges their progress and challenges",
+    "suggestedStrategy": "One specific marketing strategy recommendation with reasoning"
   }
 }
 

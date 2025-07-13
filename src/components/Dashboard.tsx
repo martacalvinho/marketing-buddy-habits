@@ -12,8 +12,35 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Check, Star, Users, PlayCircle, Clock, Target, Globe, TrendingUp } from "lucide-react";
-import WebsiteAnalysisStorage from "@/components/WebsiteAnalysisStorage";
+import { 
+  Calendar, 
+  Check, 
+  Star, 
+  Users, 
+  PlayCircle, 
+  Clock, 
+  Target, 
+  Globe, 
+  TrendingUp, 
+  Plus, 
+  BarChart3, 
+  Zap, 
+  Award, 
+  ChevronRight, 
+  ArrowUp, 
+  ArrowDown, 
+  Search, 
+  Flame, 
+  Trophy, 
+  Lock, 
+  BookOpen 
+} from "lucide-react";
+import { updatePlatformStreak, calculateDailyStreak, getPlatformStreaks, type PlatformStreak as PlatformStreakType } from "@/utils/streakManager";
+import { getMotivationalMessage, getTimeBasedGreeting, getStreakMessage } from "@/utils/motivationalMessages";
+import TaskStartModal from "./TaskStartModal";
+import StartedTasksView from "./StartedTasksView";
+import EnhancedStrategyLibrary, { type Strategy } from "./EnhancedStrategyLibrary";
+import MonthCalendarView from "./MonthCalendarView";
 
 interface Profile {
   id: string;
@@ -68,26 +95,50 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [weeklyStats, setWeeklyStats] = useState<WeeklyStat[]>([]);
-  const [platformStreaks, setPlatformStreaks] = useState<PlatformStreak[]>([]);
-  const [websiteAnalyses, setWebsiteAnalyses] = useState<WebsiteAnalysis[]>([]);
-  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [taskApproach, setTaskApproach] = useState("");
-  const [taskResult, setTaskResult] = useState("");
+  const [platformStreaks, setPlatformStreaks] = useState<PlatformStreakType[]>([]);
+  const [dailyStreak, setDailyStreak] = useState<number>(0);
+  const [motivationalMessage, setMotivationalMessage] = useState<any>(null);
+  const [selectedTaskForStart, setSelectedTaskForStart] = useState<Task | null>(null);
+  const [isTaskStartModalOpen, setIsTaskStartModalOpen] = useState(false);
+  const [showStartedTasks, setShowStartedTasks] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null);
+  const [lockedStrategy, setLockedStrategy] = useState<Strategy | null>(null);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'strategies' | 'calendar'>('dashboard');
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    // Get the start of the current week (Monday)
+    const today = new Date();
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const weekStart = new Date(today.setDate(diff));
+    return weekStart.toISOString().split('T')[0];
+  });
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const handleTaskCompleted = () => {
+    loadUserData();
+  };
+
+  const handleTaskStarted = (taskId: string) => {
+    loadUserData();
+    setShowStartedTasks(true);
+  };
+
+  const handleTaskWorkflowCompleted = () => {
+    loadUserData();
+  };
 
   useEffect(() => {
     loadUserData();
   }, []);
 
-  // Reload tasks when website selection changes
+  // Load tasks when profile is loaded
   useEffect(() => {
     if (profile) {
-      loadTasksForWebsite();
+      loadTasks();
     }
-  }, [selectedWebsiteId]);
+  }, [profile]);
 
   const loadUserData = async () => {
     try {
@@ -111,22 +162,7 @@ export default function Dashboard() {
 
       setProfile(profileData);
 
-      // Load website analyses
-      const { data: analysesData } = await supabase
-        .from('website_analyses')
-        .select('id, website_url, analysis_data, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      const websiteAnalyses = analysesData || [];
-      setWebsiteAnalyses(websiteAnalyses);
-
-      // Set default selected website to the first one if available
-      if (websiteAnalyses.length > 0 && !selectedWebsiteId) {
-        setSelectedWebsiteId(websiteAnalyses[0].id);
-      }
-
-      // Load current week's tasks (filtered by selected website if available)
+      // Load current week's tasks 
       const weekStart = new Date();
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const weekStartStr = weekStart.toISOString().split('T')[0];
@@ -138,10 +174,7 @@ export default function Dashboard() {
         .eq('week_start_date', weekStartStr)
         .order('created_at');
 
-      // Filter by selected website if one is selected
-      if (selectedWebsiteId) {
-        tasksQuery = tasksQuery.eq('website_analysis_id', selectedWebsiteId);
-      }
+
 
       const { data: tasksData } = await tasksQuery;
       setTasks(tasksData || []);
@@ -156,12 +189,27 @@ export default function Dashboard() {
       setWeeklyStats(statsData || []);
 
       // Load platform streaks
-      const { data: streaksData } = await supabase
-        .from('platform_streaks')
-        .select('*')
-        .eq('user_id', user.id);
+      const streaksData = await getPlatformStreaks(user.id);
+      setPlatformStreaks(streaksData);
 
-      setPlatformStreaks(streaksData || []);
+      // Calculate daily streak
+      const currentDailyStreak = await calculateDailyStreak(user.id);
+      setDailyStreak(currentDailyStreak);
+
+      // Generate motivational message
+      const completedTasks = (tasksData || []).filter(task => task.completed).length;
+      const totalTasks = (tasksData || []).length;
+      const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+      const dayOfWeek = new Date().getDay();
+      
+      const message = getMotivationalMessage(
+        dayOfWeek,
+        progressPercentage,
+        completedTasks,
+        totalTasks,
+        currentDailyStreak
+      );
+      setMotivationalMessage(message);
 
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -175,7 +223,7 @@ export default function Dashboard() {
     }
   };
 
-  const loadTasksForWebsite = async () => {
+  const loadTasks = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -184,23 +232,17 @@ export default function Dashboard() {
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const weekStartStr = weekStart.toISOString().split('T')[0];
 
-      let tasksQuery = supabase
+      const { data: tasksData } = await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
         .eq('week_start_date', weekStartStr)
         .order('created_at');
 
-      // Filter by selected website if one is selected
-      if (selectedWebsiteId) {
-        tasksQuery = tasksQuery.eq('website_analysis_id', selectedWebsiteId);
-      }
-
-      const { data: tasksData } = await tasksQuery;
       setTasks(tasksData || []);
 
     } catch (error) {
-      console.error('Error loading tasks for website:', error);
+      console.error('Error loading tasks:', error);
     }
   };
 
@@ -229,41 +271,39 @@ export default function Dashboard() {
           : t
       ));
 
-      // Update streak if completing a task
-      if (!task.completed && profile) {
+      // Update platform streak tracking
+      if (profile) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          // Update platform streak
-          await updatePlatformStreak(task.category, user.id);
+          // Update platform streak for this category
+          await updatePlatformStreak(user.id, task.category);
           
-          // Update overall streak
-          const today = new Date().toISOString().split('T')[0];
-          const lastActivity = new Date(profile.last_activity_date);
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
+          // Recalculate daily streak and refresh data
+          const newDailyStreak = await calculateDailyStreak(user.id);
+          setDailyStreak(newDailyStreak);
           
-          let newStreak = profile.current_streak;
+          // Refresh platform streaks
+          const updatedStreaks = await getPlatformStreaks(user.id);
+          setPlatformStreaks(updatedStreaks);
           
-          if (profile.last_activity_date !== today) {
-            // Check if last activity was yesterday (consecutive streak)
-            if (lastActivity.toDateString() === yesterday.toDateString()) {
-              // Consecutive day - increment streak
-              newStreak = profile.current_streak + 1;
-            } else if (lastActivity.toDateString() !== new Date().toDateString()) {
-              // Not consecutive - reset to 1
-              newStreak = 1;
-            }
-            
-            await supabase
-              .from('profiles')
-              .update({
-                current_streak: newStreak,
-                last_activity_date: today
-              })
-              .eq('user_id', profile.user_id);
-
-            setProfile({ ...profile, current_streak: newStreak, last_activity_date: today });
-          }
+          // Update motivational message with new progress
+          const updatedTasks = tasks.map(t => 
+            t.id === taskId 
+              ? { ...t, completed: !t.completed }
+              : t
+          );
+          const completedCount = updatedTasks.filter(t => t.completed).length;
+          const totalCount = updatedTasks.length;
+          const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+          
+          const message = getMotivationalMessage(
+            new Date().getDay(),
+            progressPercentage,
+            completedCount,
+            totalCount,
+            newDailyStreak
+          );
+          setMotivationalMessage(message);
         }
       }
 
@@ -282,37 +322,66 @@ export default function Dashboard() {
     }
   };
 
-  const generateWeeklyPlan = async () => {
+  // Strategy handlers
+  const handleStrategySelect = (strategy: Strategy) => {
+    setSelectedStrategy(strategy);
+    generateWeeklyPlan(strategy);
+  };
+
+  const handleStrategyLock = (strategyId: string) => {
+    if (strategyId === '') {
+      setLockedStrategy(null);
+    } else {
+      // Find strategy by ID from the strategies data
+      // For now, we'll handle this when we have the strategy data available
+      const strategy = selectedStrategy; // Temporary - should find by ID
+      setLockedStrategy(strategy);
+    }
+  };
+
+  const generateWeeklyPlan = async (strategy?: Strategy, weekStartDate?: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      const targetWeekStart = weekStartDate || currentWeekStart;
+      
       const { data, error } = await supabase.functions.invoke('generate-weekly-plan', {
         body: { 
           userId: user.id,
-          websiteAnalysisId: selectedWebsiteId 
+          selectedStrategy: strategy || lockedStrategy,
+          weekStartDate: targetWeekStart,
         }
       });
 
       if (error) throw error;
 
       if (data.success) {
+        const weekDate = new Date(targetWeekStart).toLocaleDateString();
         toast({
           title: "Weekly Plan Generated! ",
-          description: `Generated ${data.tasksGenerated} new tasks for next week`,
+          description: `Generated ${data.tasksGenerated} new tasks for week of ${weekDate}`,
         });
         
         // Reload tasks to show the new ones
-        loadTasksForWebsite();
+        loadTasks();
       }
     } catch (error) {
       console.error('Error generating weekly plan:', error);
       toast({
         title: "Error",
-        description: "Failed to generate weekly plan",
+        description: "Failed to generate weekly plan. Please try again.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleWeekChange = (weekStartDate: string) => {
+    setCurrentWeekStart(weekStartDate);
+  };
+
+  const handleGenerateWeeklyPlanForWeek = (weekStartDate: string) => {
+    generateWeeklyPlan(lockedStrategy, weekStartDate);
   };
 
   // Get dynamic dashboard message based on day and progress
@@ -409,44 +478,7 @@ export default function Dashboard() {
     }
   };
 
-  const saveTaskDetails = async () => {
-    if (!selectedTask) return;
 
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({
-          user_approach: taskApproach,
-          result_notes: taskResult
-        })
-        .eq('id', selectedTask.id);
-
-      if (error) throw error;
-
-      setTasks(tasks.map(t => 
-        t.id === selectedTask.id 
-          ? { ...t, user_approach: taskApproach, result_notes: taskResult }
-          : t
-      ));
-
-      setSelectedTask(null);
-      setTaskApproach("");
-      setTaskResult("");
-
-      toast({
-        title: "Task details saved!",
-        description: "Your approach and results have been recorded",
-      });
-
-    } catch (error) {
-      console.error('Error saving task details:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save task details",
-        variant: "destructive",
-      });
-    }
-  };
 
   if (isLoading) {
     return (
@@ -482,22 +514,63 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="font-medium">
-                <Calendar className="w-4 h-4 mr-2" />
-                Week View
-              </Button>
-              <Button variant="default" size="sm" asChild className="font-medium">
-                <a href="/strategies">Strategy Library</a>
-              </Button>
+              {lockedStrategy && (
+                <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                  <Lock className="w-3 h-3 mr-1" />
+                  {lockedStrategy.name}
+                </Badge>
+              )}
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant={currentView === 'dashboard' ? 'default' : 'outline'}
+                  onClick={() => setCurrentView('dashboard')}
+                  className="flex items-center gap-2"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Dashboard
+                </Button>
+                <Button 
+                  variant={currentView === 'strategies' ? 'default' : 'outline'}
+                  onClick={() => setCurrentView('strategies')}
+                  className="flex items-center gap-2"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Strategy Library
+                </Button>
+                <Button 
+                  variant={currentView === 'calendar' ? 'default' : 'outline'}
+                  onClick={() => setCurrentView('calendar')}
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Month View
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+        {currentView === 'strategies' ? (
+          <EnhancedStrategyLibrary
+            onStrategySelect={handleStrategySelect}
+            onStrategyLock={handleStrategyLock}
+            selectedStrategy={selectedStrategy}
+            lockedStrategy={lockedStrategy}
+          />
+        ) : currentView === 'calendar' ? (
+          <MonthCalendarView
+            tasks={tasks}
+            onTaskToggle={toggleTask}
+            onGenerateWeeklyPlan={handleGenerateWeeklyPlanForWeek}
+            currentWeekStart={currentWeekStart}
+            onWeekChange={handleWeekChange}
+          />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-8">
             {/* Progress Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="bg-gradient-to-br from-background to-background border-2 border-foreground shadow-brutal">
@@ -535,84 +608,33 @@ export default function Dashboard() {
               </Card>
             </div>
 
-            {/* Website Selector & Analysis Hub */}
-            <Card className="border shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                    <Globe className="w-5 h-5" />
-                    Website Analysis Hub
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    {websiteAnalyses.length > 0 && (
-                      <Select 
-                        value={selectedWebsiteId || ""} 
-                        onValueChange={setSelectedWebsiteId}
-                      >
-                        <SelectTrigger className="w-64 font-medium">
-                          <SelectValue placeholder="Select Website" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="" className="font-medium">All Websites</SelectItem>
-                          {websiteAnalyses.map((analysis) => (
-                            <SelectItem key={analysis.id} value={analysis.id} className="font-medium">
-                              {analysis.website_url}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                </div>
-                <CardDescription className="font-medium">
-                  {selectedWebsiteId 
-                    ? `Tasks for ${websiteAnalyses.find(w => w.id === selectedWebsiteId)?.website_url || 'Selected Website'}`
-                    : `Managing ${websiteAnalyses.length} website${websiteAnalyses.length !== 1 ? 's' : ''}`
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="analyses" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="analyses" className="font-medium">Website Analyses</TabsTrigger>
-                    <TabsTrigger value="new" className="font-medium">New Analysis</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="analyses" className="mt-6">
-                    {profile && (
-                      <WebsiteAnalysisStorage userId={profile.user_id} />
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="new" className="mt-6">
-                    <div className="text-center py-8">
-                      <TrendingUp className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                      <div className="text-lg font-semibold mb-2">Start New Website Analysis</div>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Analyze a new website to generate personalized marketing tasks
-                      </p>
-                      <Button variant="default" size="lg" className="font-medium">
-                        <Globe className="w-4 h-4 mr-2" />
-                        Analyze Website
-                      </Button>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
+
 
             {/* Tasks */}
             <Card className="border shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between text-xl font-semibold">
-                  This Week's Tasks
-                  <Badge variant="outline" className="font-medium">
-                    {completedTasks}/{tasks.length} completed
-                  </Badge>
-                </CardTitle>
-                <CardDescription className="font-medium">
-                  Tailored marketing tasks for your {profile.product_type}
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+                      This Week's Tasks
+                      <Badge variant="outline" className="font-medium">
+                        {completedTasks}/{tasks.length} completed
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription className="font-medium mt-1">
+                      Tailored marketing tasks for your {profile.product_type}
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant={showStartedTasks ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowStartedTasks(!showStartedTasks)}
+                    className="flex items-center gap-2"
+                  >
+                    <PlayCircle className="h-4 w-4" />
+                    {showStartedTasks ? "Hide" : "Show"} Started Tasks
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="all" className="w-full">
@@ -665,15 +687,14 @@ export default function Dashboard() {
                         <Button 
                           variant="default" 
                           size="sm"
-                          className="font-medium"
                           onClick={() => {
-                            setSelectedTask(task);
-                            setTaskApproach(task.user_approach || "");
-                            setTaskResult(task.result_notes || "");
+                            setSelectedTaskForStart(task);
+                            setIsTaskStartModalOpen(true);
                           }}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
                         >
-                          <PlayCircle className="w-4 h-4 mr-2" />
-                          Start Task
+                          <PlayCircle className="mr-2 h-4 w-4" />
+                          START TASK
                         </Button>
                       </div>
                     ))}
@@ -698,7 +719,10 @@ export default function Dashboard() {
                           variant="default" 
                           size="sm"
                           className="font-medium"
-                          onClick={() => setSelectedTask(task)}
+                          onClick={() => {
+                            setSelectedTaskForStart(task);
+                            setIsTaskStartModalOpen(true);
+                          }}
                         >
                           Start
                         </Button>
@@ -738,7 +762,10 @@ export default function Dashboard() {
                           variant="destructive" 
                           size="sm"
                           className="font-medium"
-                          onClick={() => setSelectedTask(task)}
+                          onClick={() => {
+                            setSelectedTaskForStart(task);
+                            setIsTaskStartModalOpen(true);
+                          }}
                         >
                           High Priority
                         </Button>
@@ -748,6 +775,11 @@ export default function Dashboard() {
                 </Tabs>
               </CardContent>
             </Card>
+
+            {/* Started Tasks View */}
+            {showStartedTasks && (
+              <StartedTasksView onTaskCompleted={handleTaskWorkflowCompleted} />
+            )}
           </div>
 
           {/* Sidebar */}
@@ -761,7 +793,7 @@ export default function Dashboard() {
                 <Button 
                   variant="default" 
                   className="w-full justify-start font-medium"
-                  onClick={generateWeeklyPlan}
+                  onClick={() => generateWeeklyPlan()}
                 >
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Generate Weekly Plan
@@ -770,6 +802,12 @@ export default function Dashboard() {
                   <a href="/experiments">
                     <Star className="w-4 h-4 mr-2" />
                     Start Experiment
+                  </a>
+                </Button>
+                <Button variant="outline" className="w-full justify-start font-medium" asChild>
+                  <a href="/website-analysis">
+                    <Search className="w-4 h-4 mr-2" />
+                    Website Analysis
                   </a>
                 </Button>
                 <Button variant="outline" className="w-full justify-start font-medium">
@@ -860,80 +898,21 @@ export default function Dashboard() {
                 </p>
               </CardContent>
             </Card>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Task Details Modal */}
-      {selectedTask && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-2xl border shadow-xl">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold">
-                Start Task: {selectedTask.title}
-              </CardTitle>
-              <CardDescription className="font-medium">
-                {selectedTask.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {selectedTask.ai_suggestion && (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h4 className="font-semibold mb-2">💡 AI Suggestion:</h4>
-                  <p className="font-medium text-blue-900">{selectedTask.ai_suggestion}</p>
-                </div>
-              )}
-              
-              <div>
-                <Label className="font-semibold">Your Approach:</Label>
-                <Textarea
-                  placeholder="Describe how you plan to complete this task..."
-                  value={taskApproach}
-                  onChange={(e) => setTaskApproach(e.target.value)}
-                  className="font-medium mt-2"
-                />
-              </div>
-
-              <div>
-                <Label className="font-semibold">Results & Notes:</Label>
-                <Textarea
-                  placeholder="What were the results? What did you learn?"
-                  value={taskResult}
-                  onChange={(e) => setTaskResult(e.target.value)}
-                  className="font-medium mt-2"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setSelectedTask(null)}
-                  className="font-medium"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  variant="default" 
-                  onClick={saveTaskDetails}
-                  className="font-medium flex-1"
-                >
-                  Save Details
-                </Button>
-                <Button 
-                  variant="default"
-                  onClick={() => {
-                    toggleTask(selectedTask.id);
-                    saveTaskDetails();
-                  }}
-                  className="font-medium bg-green-600 hover:bg-green-700"
-                >
-                  Mark Complete
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Task Start Modal */}
+      <TaskStartModal
+        task={selectedTaskForStart}
+        isOpen={isTaskStartModalOpen}
+        onClose={() => {
+          setIsTaskStartModalOpen(false);
+          setSelectedTaskForStart(null);
+        }}
+        onTaskStarted={handleTaskStarted}
+      />
     </div>
   );
 }
