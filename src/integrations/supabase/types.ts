@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      analysis_sections: {
+        Row: {
+          analysis_id: string | null
+          created_at: string | null
+          id: string
+          section_content: string
+          section_title: string
+          section_type: string
+          updated_at: string | null
+          user_id: string | null
+          website_url: string | null
+        }
+        Insert: {
+          analysis_id?: string | null
+          created_at?: string | null
+          id?: string
+          section_content: string
+          section_title: string
+          section_type: string
+          updated_at?: string | null
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          analysis_id?: string | null
+          created_at?: string | null
+          id?: string
+          section_content?: string
+          section_title?: string
+          section_type?: string
+          updated_at?: string | null
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       platform_streaks: {
         Row: {
           best_streak: number
@@ -59,6 +95,7 @@ export type Database = {
           platforms: string[] | null
           product_name: string | null
           product_type: string | null
+          selected_strategy_id: string | null
           subscription_ends_at: string | null
           subscription_id: string | null
           subscription_status: string | null
@@ -80,6 +117,7 @@ export type Database = {
           platforms?: string[] | null
           product_name?: string | null
           product_type?: string | null
+          selected_strategy_id?: string | null
           subscription_ends_at?: string | null
           subscription_id?: string | null
           subscription_status?: string | null
@@ -101,6 +139,7 @@ export type Database = {
           platforms?: string[] | null
           product_name?: string | null
           product_type?: string | null
+          selected_strategy_id?: string | null
           subscription_ends_at?: string | null
           subscription_id?: string | null
           subscription_status?: string | null
@@ -111,7 +150,15 @@ export type Database = {
           website_analysis?: Json | null
           website_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_selected_strategy"
+            columns: ["selected_strategy_id"]
+            isOneToOne: false
+            referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       strategies: {
         Row: {
@@ -146,20 +193,55 @@ export type Database = {
         }
         Relationships: []
       }
+      strategy_configurations: {
+        Row: {
+          configuration: Json
+          created_at: string | null
+          id: string
+          strategy_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          configuration: Json
+          created_at?: string | null
+          id?: string
+          strategy_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          configuration?: Json
+          created_at?: string | null
+          id?: string
+          strategy_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
+          accepted_approach: boolean | null
+          actual_time_minutes: number | null
           ai_suggestion: string | null
           category: string | null
           completed: boolean | null
           completed_at: string | null
           created_at: string
           description: string | null
+          ended_at: string | null
           estimated_time: string | null
           id: string
+          metrics_tracked: Json | null
           priority: string | null
           result_metrics: Json | null
           result_notes: string | null
+          started_at: string | null
+          status: string | null
           strategy_id: string | null
+          suggested_approach: string | null
+          task_results: Json | null
           title: string
           user_approach: string | null
           user_id: string
@@ -167,18 +249,26 @@ export type Database = {
           week_start_date: string
         }
         Insert: {
+          accepted_approach?: boolean | null
+          actual_time_minutes?: number | null
           ai_suggestion?: string | null
           category?: string | null
           completed?: boolean | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
+          ended_at?: string | null
           estimated_time?: string | null
           id?: string
+          metrics_tracked?: Json | null
           priority?: string | null
           result_metrics?: Json | null
           result_notes?: string | null
+          started_at?: string | null
+          status?: string | null
           strategy_id?: string | null
+          suggested_approach?: string | null
+          task_results?: Json | null
           title: string
           user_approach?: string | null
           user_id: string
@@ -186,18 +276,26 @@ export type Database = {
           week_start_date: string
         }
         Update: {
+          accepted_approach?: boolean | null
+          actual_time_minutes?: number | null
           ai_suggestion?: string | null
           category?: string | null
           completed?: boolean | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
+          ended_at?: string | null
           estimated_time?: string | null
           id?: string
+          metrics_tracked?: Json | null
           priority?: string | null
           result_metrics?: Json | null
           result_notes?: string | null
+          started_at?: string | null
+          status?: string | null
           strategy_id?: string | null
+          suggested_approach?: string | null
+          task_results?: Json | null
           title?: string
           user_approach?: string | null
           user_id?: string

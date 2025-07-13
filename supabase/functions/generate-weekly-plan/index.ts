@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -33,9 +34,63 @@ serve(async (req) => {
     // Get user profile and goal
     const { data: profile } = await supabase
       .from('profiles')
-      .select('goal, product_type, product_name, platforms, selected_strategy')
+      .select('goal, product_type, product_name, platforms, selected_strategy_id')
       .eq('user_id', userId)
       .single();
+
+    // Get analysis sections for the user's website analysis
+    let analysisSections = '';
+    let websiteUrl = '';
+    
+    if (websiteAnalysisId) {
+      console.log('Fetching analysis sections for website analysis ID:', websiteAnalysisId);
+      const { data: sections } = await supabase
+        .from('analysis_sections')
+        .select('section_title, section_content, section_type')
+        .eq('analysis_id', websiteAnalysisId);
+
+      if (sections && sections.length > 0) {
+        analysisSections = sections.map(section => 
+          `## ${section.section_title} (${section.section_type})\n${section.section_content}`
+        ).join('\n\n');
+      }
+
+      // Get website URL from the analysis
+      const { data: analysis } = await supabase
+        .from('website_analyses')
+        .select('website_url')
+        .eq('id', websiteAnalysisId)
+        .single();
+      
+      if (analysis) {
+        websiteUrl = analysis.website_url;
+      }
+    } else {
+      // Try to get the most recent analysis for this user
+      const { data: recentAnalysis } = await supabase
+        .from('website_analyses')
+        .select('id, website_url')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (recentAnalysis) {
+        websiteUrl = recentAnalysis.website_url;
+        
+        // Get analysis sections for the most recent analysis
+        const { data: sections } = await supabase
+          .from('analysis_sections')
+          .select('section_title, section_content, section_type')
+          .eq('analysis_id', recentAnalysis.id);
+
+        if (sections && sections.length > 0) {
+          analysisSections = sections.map(section => 
+            `## ${section.section_title} (${section.section_type})\n${section.section_content}`
+          ).join('\n\n');
+        }
+      }
+    }
 
     // Get past week's tasks and results
     const pastWeekStart = new Date();
@@ -58,17 +113,6 @@ serve(async (req) => {
     }
 
     const { data: pastTasks } = await pastTasksQuery;
-
-    // Get website analysis if specified
-    let websiteAnalysis = null;
-    if (websiteAnalysisId) {
-      const { data: analysis } = await supabase
-        .from('website_analyses')
-        .select('*')
-        .eq('id', websiteAnalysisId)
-        .single();
-      websiteAnalysis = analysis;
-    }
 
     // Generate next week's tasks using AI
     const nextWeekStart = new Date();
@@ -97,7 +141,14 @@ Goal: ${profile?.goal || 'Not specified'}
 Product Type: ${profile?.product_type || 'Not specified'}
 Product Name: ${profile?.product_name || 'Not specified'}
 Active Platforms: ${profile?.platforms?.join(', ') || 'Not specified'}
-Selected Marketing Strategy: ${profile?.selected_strategy || 'Not specified'}
+Selected Marketing Strategy: ${profile?.selected_strategy_id || 'Not specified'}
+
+=== WEBSITE ANALYSIS CONTEXT ===
+${websiteUrl ? `🌐 Website: ${websiteUrl}` : 'No website analysis available'}
+${analysisSections ? `
+📊 Detailed Analysis Sections:
+${analysisSections}
+` : 'No detailed analysis sections available - ask user to complete website analysis first for better results'}
 
 === PERFORMANCE ANALYTICS ===
 Overall Completion Rate: ${completionRate}%
@@ -122,12 +173,6 @@ ${pastTasks?.length ?
   `).join('\n') 
   : 'No historical data available - this is likely a new user'}
 
-=== WEBSITE CONTEXT ===
-${websiteAnalysis ? 
-  `🌐 Website: ${(websiteAnalysis as any).website_url}
-📊 Analysis Insights: ${typeof (websiteAnalysis as any).analysis_data === 'string' ? (websiteAnalysis as any).analysis_data : JSON.stringify((websiteAnalysis as any).analysis_data, null, 2)}`
-  : 'No website analysis available'}
-
 === ADAPTIVE PLANNING INSTRUCTIONS ===
 As an intelligent assistant, analyze the user's patterns and generate a personalized plan:
 
@@ -144,9 +189,10 @@ As an intelligent assistant, analyze the user's patterns and generate a personal
 4. **Progressive Difficulty**: Match task complexity to their demonstrated capabilities
 5. **Personalized Timing**: Suggest time estimates based on their past performance
 6. **Strategy Alignment**: ALL tasks must align with their selected marketing strategy and support its execution
+7. **Website-Specific**: Reference specific opportunities and recommendations from their website analysis
 
 🎯 STRATEGY-FOCUSED BRIEF:
-The user has selected "${profile?.selected_strategy || 'Not specified'}" as their primary marketing strategy. This week's tasks should:
+The user has selected "${profile?.selected_strategy_id || 'Not specified'}" as their primary marketing strategy. This week's tasks should:
 - Directly support and advance this specific marketing strategy
 - Build upon the website analysis insights to create relevant, actionable tasks
 - Form a coherent weekly plan that moves the strategy forward step-by-step
@@ -159,6 +205,7 @@ The user has selected "${profile?.selected_strategy || 'Not specified'}" as thei
 - Include variety but emphasize their successful patterns
 - Make tasks specific and actionable, not generic
 - Consider their goal and current business stage
+- Use insights from the analysis sections to create targeted tasks
 
 Respond with JSON only:
 {

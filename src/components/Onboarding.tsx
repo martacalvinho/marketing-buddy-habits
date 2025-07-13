@@ -144,36 +144,12 @@ export default function Onboarding() {
         return;
       }
 
-      // Get the actual strategy ID from the strategies table
-      let strategyId = null;
-      if (formData.selectedStrategy) {
-        // If it's already a UUID, use it directly
-        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(formData.selectedStrategy)) {
-          strategyId = formData.selectedStrategy;
-        } else {
-          // Otherwise, try to find a matching strategy by name in the local MARKETING_STRATEGIES
-          const matchingStrategy = MARKETING_STRATEGIES.find(s => s.id === formData.selectedStrategy);
-          
-          if (matchingStrategy) {
-            // If we found a matching strategy, look it up in the database by name
-            const { data: strategy } = await supabase
-              .from('strategies')
-              .select('id')
-              .eq('name', matchingStrategy.name)
-              .single();
-            
-            if (strategy) {
-              strategyId = strategy.id;
-            } else {
-              console.warn(`No matching strategy found in database for: ${formData.selectedStrategy}`);
-            }
-          } else {
-            console.warn(`No matching strategy found in MARKETING_STRATEGIES for: ${formData.selectedStrategy}`);
-          }
-        }
-      }
+      // Find the selected strategy from MARKETING_STRATEGIES to get its name
+      const selectedStrategyData = MARKETING_STRATEGIES.find(s => s.id === formData.selectedStrategy);
+      console.log('Selected strategy data:', selectedStrategyData);
+      console.log('Selected strategy ID:', formData.selectedStrategy);
 
-      // Save profile data with selected_strategy_id
+      // Save profile data with selected_strategy (store the strategy name/ID for reference)
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -184,7 +160,7 @@ export default function Onboarding() {
           product_type: formData.productType,
           goal: formData.goal,
           platforms: formData.platforms,
-          selected_strategy_id: strategyId,
+          selected_strategy_id: formData.selectedStrategy, // Store the strategy ID directly
           current_streak: 0,
           last_activity_date: new Date().toISOString().split('T')[0]
         }, {
@@ -194,12 +170,21 @@ export default function Onboarding() {
       if (profileError) throw profileError;
 
       // Save website analysis to website_analyses table
+      let websiteAnalysisId = null;
       if (formData.websiteAnalysis) {
-        await supabase.from('website_analyses').insert({
-          user_id: user.id,
-          website_url: formData.websiteUrl,
-          analysis_data: formData.websiteAnalysis,
-        });
+        const { data: analysisData, error: analysisError } = await supabase
+          .from('website_analyses')
+          .insert({
+            user_id: user.id,
+            website_url: formData.websiteUrl,
+            analysis_data: formData.websiteAnalysis,
+          })
+          .select('id')
+          .single();
+
+        if (analysisError) throw analysisError;
+        websiteAnalysisId = analysisData.id;
+
         // Save each analysis section to analysis_sections table
         try {
           console.log('Saving analysis sections for user:', user.id, 'URL:', formData.websiteUrl);
@@ -214,60 +199,61 @@ export default function Onboarding() {
           console.error('Failed to save analysis sections:', sectionSaveError);
           // Don't throw - continue with onboarding even if section saving fails
         }
-      
       }
 
-      // Generate strategies and tasks based on analysis
-      if (formData.websiteAnalysis) {
+      // Generate initial tasks based on analysis and selected strategy
+      if (formData.websiteAnalysis && formData.selectedStrategy) {
         try {
-          const { data: strategyData } = await supabase.functions.invoke('generate-strategy', {
+          console.log('Generating initial tasks with strategy:', formData.selectedStrategy);
+          
+          // Get the strategy details to include in the prompt
+          const strategyDetails = selectedStrategyData ? {
+            name: selectedStrategyData.name,
+            description: selectedStrategyData.description,
+            category: selectedStrategyData.category
+          } : null;
+
+          const { data: taskData } = await supabase.functions.invoke('generate-strategy', {
             body: {
               analysis: formData.websiteAnalysis,
               userGoal: formData.goal,
               productType: formData.productType,
-              platforms: formData.platforms
+              platforms: formData.platforms,
+              selectedStrategy: strategyDetails, // Pass the full strategy details
+              websiteAnalysisId: websiteAnalysisId,
+              isOnboarding: true // Flag to generate 5 specific tasks
             }
           });
 
-          if (strategyData?.success) {
-            // Save strategies
-            const strategies = strategyData.strategy.strategies.map((s: any) => ({
+          if (taskData?.success) {
+            console.log('Tasks generated successfully:', taskData);
+            
+            // Save the generated tasks
+            const weekStartDate = new Date();
+            weekStartDate.setDate(weekStartDate.getDate() - weekStartDate.getDay());
+            
+            const tasks = taskData.strategy.weeklyTasks.map((t: any) => ({
               user_id: user.id,
-              name: s.name,
-              description: s.description,
-              channel: s.channel,
-              is_active: true,
-              ai_generated: true
+              website_analysis_id: websiteAnalysisId,
+              title: t.title,
+              description: t.description,
+              category: t.category,
+              priority: t.priority,
+              estimated_time: t.estimatedTime,
+              ai_suggestion: t.aiSuggestion,
+              week_start_date: weekStartDate.toISOString().split('T')[0]
             }));
 
-            const { data: savedStrategies } = await supabase
-              .from('strategies')
-              .insert(strategies)
-              .select();
-
-            // Save weekly tasks
-            if (savedStrategies && savedStrategies.length > 0) {
-              const weekStartDate = new Date();
-              weekStartDate.setDate(weekStartDate.getDate() - weekStartDate.getDay());
-              
-              const tasks = strategyData.strategy.weeklyTasks.map((t: any, index: number) => ({
-                user_id: user.id,
-                strategy_id: savedStrategies[index % savedStrategies.length]?.id,
-                title: t.title,
-                description: t.description,
-                category: t.category,
-                priority: t.priority,
-                estimated_time: t.estimatedTime,
-                ai_suggestion: t.aiSuggestion,
-                week_start_date: weekStartDate.toISOString().split('T')[0]
-              }));
-
-              await supabase.from('tasks').insert(tasks);
+            const { error: tasksError } = await supabase.from('tasks').insert(tasks);
+            if (tasksError) {
+              console.error('Error saving tasks:', tasksError);
+            } else {
+              console.log(`Successfully saved ${tasks.length} tasks`);
             }
           }
         } catch (strategyError) {
-          console.error("Error generating strategies:", strategyError);
-          // Continue even if strategy generation fails
+          console.error("Error generating initial tasks:", strategyError);
+          // Continue even if task generation fails
         }
       }
 
@@ -277,7 +263,7 @@ export default function Onboarding() {
       
       toast({
         title: "Welcome to Marketing Buddy! 🎉",
-        description: "Your personalized marketing dashboard is ready",
+        description: "Your personalized marketing dashboard is ready with initial tasks",
       });
       
       navigate("/dashboard");
