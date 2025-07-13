@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -93,30 +94,20 @@ export default function WebsiteAnalyzer({ onAnalysisComplete }: WebsiteAnalyzerP
     }
   };
 
-  const handleSaveToTasks = async (opportunities: string[], recommendations: string[]) => {
+  const handleSaveToTasks = async (tasks: string[]) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Create tasks for opportunities and recommendations
-      const tasksToCreate = [
-        ...opportunities.map(opportunity => ({
-          user_id: user.id,
-          title: `Market Opportunity: ${opportunity.substring(0, 50)}...`,
-          description: opportunity,
-          category: 'marketing_opportunity',
-          week_start_date: new Date().toISOString().split('T')[0],
-          ai_suggestion: opportunity
-        })),
-        ...recommendations.map(recommendation => ({
-          user_id: user.id,
-          title: `Action Item: ${recommendation.substring(0, 50)}...`,
-          description: recommendation,
-          category: 'action_item',
-          week_start_date: new Date().toISOString().split('T')[0],
-          ai_suggestion: recommendation
-        }))
-      ];
+      // Create tasks from the provided array
+      const tasksToCreate = tasks.map(task => ({
+        user_id: user.id,
+        title: `Website Task: ${task.substring(0, 50)}...`,
+        description: task,
+        category: 'website_improvement',
+        week_start_date: new Date().toISOString().split('T')[0],
+        ai_suggestion: task
+      }));
 
       const { error } = await supabase
         .from('tasks')
@@ -137,8 +128,6 @@ export default function WebsiteAnalyzer({ onAnalysisComplete }: WebsiteAnalyzerP
       });
     }
   };
-
-
 
   return (
     <div className="space-y-6">

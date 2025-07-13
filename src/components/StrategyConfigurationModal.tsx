@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -178,18 +179,22 @@ export function StrategyConfigurationModal({ open, onOpenChange, strategy, onCom
   const handleComplete = async () => {
     setIsLoading(true);
     try {
-      // Save configuration to database
+      // Save configuration to strategy_configurations table
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          strategy_config: configuration
-        })
-        .eq('user_id', user.id);
+      // First save to strategy_configurations table
+      const { error: configError } = await supabase
+        .from('strategy_configurations')
+        .upsert({
+          user_id: user.id,
+          strategy_id: strategy.id,
+          configuration: configuration
+        }, {
+          onConflict: 'user_id,strategy_id'
+        });
 
-      if (error) throw error;
+      if (configError) throw configError;
 
       toast({
         title: "Configuration Saved! 🎉",
