@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -144,12 +145,27 @@ export default function Onboarding() {
         return;
       }
 
-      // Find the selected strategy from MARKETING_STRATEGIES to get its name
+      // Find the selected strategy from MARKETING_STRATEGIES to get its full details
       const selectedStrategyData = MARKETING_STRATEGIES.find(s => s.id === formData.selectedStrategy);
-      console.log('Selected strategy data:', selectedStrategyData);
-      console.log('Selected strategy ID:', formData.selectedStrategy);
+      
+      if (!selectedStrategyData) {
+        toast({
+          title: "Strategy Required",
+          description: "Please select a marketing strategy to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      // Save profile data with selected_strategy (store the strategy name/ID for reference)
+      console.log('Selected strategy data:', selectedStrategyData);
+      console.log('Form data:', {
+        selectedStrategy: formData.selectedStrategy,
+        hasWebsiteAnalysis: !!formData.websiteAnalysis,
+        goal: formData.goal,
+        productType: formData.productType
+      });
+
+      // Save profile data with selected_strategy_id
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -160,14 +176,19 @@ export default function Onboarding() {
           product_type: formData.productType,
           goal: formData.goal,
           platforms: formData.platforms,
-          selected_strategy_id: formData.selectedStrategy, // Store the strategy ID directly
+          selected_strategy_id: formData.selectedStrategy, // Store the strategy ID
           current_streak: 0,
           last_activity_date: new Date().toISOString().split('T')[0]
         }, {
           onConflict: 'user_id'
         });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile save error:', profileError);
+        throw profileError;
+      }
+
+      console.log('Profile saved successfully');
 
       // Save website analysis to website_analyses table
       let websiteAnalysisId = null;
@@ -182,8 +203,13 @@ export default function Onboarding() {
           .select('id')
           .single();
 
-        if (analysisError) throw analysisError;
+        if (analysisError) {
+          console.error('Analysis save error:', analysisError);
+          throw analysisError;
+        }
+        
         websiteAnalysisId = analysisData.id;
+        console.log('Website analysis saved with ID:', websiteAnalysisId);
 
         // Save each analysis section to analysis_sections table
         try {
@@ -201,38 +227,51 @@ export default function Onboarding() {
         }
       }
 
-      // Generate initial tasks based on analysis and selected strategy
+      // Generate exactly 5 initial tasks based on analysis and selected strategy
       if (formData.websiteAnalysis && formData.selectedStrategy) {
         try {
-          console.log('Generating initial tasks with strategy:', formData.selectedStrategy);
+          console.log('Generating 5 initial tasks with strategy:', selectedStrategyData.name);
           
-          // Get the strategy details to include in the prompt
-          const strategyDetails = selectedStrategyData ? {
+          // Pass the full strategy details to the AI
+          const strategyDetails = {
+            id: selectedStrategyData.id,
             name: selectedStrategyData.name,
             description: selectedStrategyData.description,
             category: selectedStrategyData.category
-          } : null;
+          };
 
-          const { data: taskData } = await supabase.functions.invoke('generate-strategy', {
+          const { data: taskData, error: taskError } = await supabase.functions.invoke('generate-strategy', {
             body: {
               analysis: formData.websiteAnalysis,
               userGoal: formData.goal,
               productType: formData.productType,
               platforms: formData.platforms,
-              selectedStrategy: strategyDetails, // Pass the full strategy details
+              selectedStrategy: strategyDetails,
               websiteAnalysisId: websiteAnalysisId,
-              isOnboarding: true // Flag to generate 5 specific tasks
+              isOnboarding: true // Flag to generate exactly 5 tasks
             }
           });
 
-          if (taskData?.success) {
-            console.log('Tasks generated successfully:', taskData);
+          if (taskError) {
+            console.error('Task generation error:', taskError);
+            throw taskError;
+          }
+
+          if (taskData?.success && taskData.strategy?.weeklyTasks) {
+            console.log('Tasks generated successfully:', taskData.strategy.weeklyTasks.length, 'tasks');
+            
+            // Ensure we have exactly 5 tasks
+            const tasks = taskData.strategy.weeklyTasks.slice(0, 5); // Take first 5 tasks
+            
+            if (tasks.length < 5) {
+              console.warn(`Only ${tasks.length} tasks generated, expected 5`);
+            }
             
             // Save the generated tasks
             const weekStartDate = new Date();
             weekStartDate.setDate(weekStartDate.getDate() - weekStartDate.getDay());
             
-            const tasks = taskData.strategy.weeklyTasks.map((t: any) => ({
+            const tasksToInsert = tasks.map((t: any) => ({
               user_id: user.id,
               website_analysis_id: websiteAnalysisId,
               title: t.title,
@@ -244,17 +283,28 @@ export default function Onboarding() {
               week_start_date: weekStartDate.toISOString().split('T')[0]
             }));
 
-            const { error: tasksError } = await supabase.from('tasks').insert(tasks);
+            const { error: tasksError } = await supabase.from('tasks').insert(tasksToInsert);
             if (tasksError) {
               console.error('Error saving tasks:', tasksError);
+              throw tasksError;
             } else {
-              console.log(`Successfully saved ${tasks.length} tasks`);
+              console.log(`Successfully saved ${tasksToInsert.length} initial tasks`);
             }
+          } else {
+            console.error('Task generation failed or returned no tasks:', taskData);
+            throw new Error('Failed to generate initial tasks');
           }
         } catch (strategyError) {
           console.error("Error generating initial tasks:", strategyError);
-          // Continue even if task generation fails
+          // Continue even if task generation fails, but show a warning
+          toast({
+            title: "Partial Setup Complete",
+            description: "Profile saved but initial tasks couldn't be generated. You can generate tasks from the dashboard.",
+            variant: "destructive",
+          });
         }
+      } else {
+        console.log('Skipping task generation - missing website analysis or strategy');
       }
 
       // Clear onboarding data from localStorage on successful completion
@@ -263,7 +313,7 @@ export default function Onboarding() {
       
       toast({
         title: "Welcome to Marketing Buddy! 🎉",
-        description: "Your personalized marketing dashboard is ready with initial tasks",
+        description: "Your personalized marketing dashboard is ready with 5 initial tasks",
       });
       
       navigate("/dashboard");
