@@ -60,14 +60,13 @@ const Onboarding = () => {
       console.log('Starting onboarding completion for user:', user.id);
       console.log('Profile data:', { productName, productType, goal, platforms, selectedStrategy, websiteUrl });
 
-      // Save profile with onboarding data
+      // Save profile with onboarding data - don't save selected_strategy_id since it's not a UUID
       const profileData = {
         user_id: user.id,
         product_name: productName || null,
         product_type: productType || null,
         goal: goal || null,
         platforms: platforms.length > 0 ? platforms : null,
-        selected_strategy_id: selectedStrategy || null,
         website_url: websiteUrl || null,
         website_analysis: websiteAnalysis ? {
           analysis_text: websiteAnalysis,

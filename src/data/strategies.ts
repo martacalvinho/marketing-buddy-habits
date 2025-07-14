@@ -1,3 +1,4 @@
+
 export const STRATEGY_SUMMARIES = {
   seo: {
     title: "SEO Strategy",
@@ -192,8 +193,54 @@ export const STRATEGY_SUMMARIES = {
   }
 };
 
+// Export the strategies array that the Onboarding component expects
+export const strategies = [
+  {
+    id: "seo",
+    name: "SEO Strategy",
+    description: "Long-term, compounding growth through organic traffic",
+    category: "Content"
+  },
+  {
+    id: "social_video",
+    name: "Social Video (TikTok, Reels)",
+    description: "Virality, awareness, and discoverability through short-form video",
+    category: "Social"
+  },
+  {
+    id: "linkedin_twitter",
+    name: "LinkedIn & Twitter",
+    description: "B2B networking, audience building, and thought leadership",
+    category: "Social"
+  },
+  {
+    id: "directories",
+    name: "Directories & Communities",
+    description: "Credibility, discoverability, backlinks",
+    category: "Content"
+  },
+  {
+    id: "cold_email",
+    name: "Cold Email Strategy",
+    description: "Direct outbound lead generation",
+    category: "Email"
+  },
+  {
+    id: "email_marketing",
+    name: "Email Marketing",
+    description: "Nurturing, retention, product education",
+    category: "Email"
+  },
+  {
+    id: "other_channels",
+    name: "Other Marketing Channels",
+    description: "Diversified approach to marketing",
+    category: "Other"
+  }
+];
+
 export const getStrategyByType = (productType: string) => {
-  const strategies = {
+  const strategyMap = {
     saas: ['seo', 'cold_email', 'directories', 'linkedin_twitter'],
     ecommerce: ['social_video', 'email_marketing', 'seo', 'other_channels'],
     content: ['seo', 'social_video', 'email_marketing', 'linkedin_twitter'],
@@ -201,5 +248,5 @@ export const getStrategyByType = (productType: string) => {
     other: ['seo', 'social_video', 'email_marketing', 'directories']
   };
   
-  return strategies[productType as keyof typeof strategies] || strategies.other;
+  return strategyMap[productType as keyof typeof strategyMap] || strategyMap.other;
 };
