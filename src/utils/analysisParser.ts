@@ -1,3 +1,4 @@
+
 export interface AnalysisSection {
   title: string;
   content: string;
@@ -63,50 +64,101 @@ export function extractKeyInsights(analysis: ParsedAnalysis): {
   opportunities: string[];
   recommendations: string[];
 } {
-  // Helper to clean up asterisks and markdown artifacts
-  const clean = (text: string) => text.replace(/^[*-]\s+/gm, '').replace(/\*/g, '').replace(/`+/g, '').replace(/_/g, '').trim();
+  // Helper function to clean and extract meaningful insights
+  const extractBulletPoints = (content: string, maxPoints: number = 3): string[] => {
+    if (!content || content.trim() === 'No data available') {
+      return Array(maxPoints).fill('No insights available');
+    }
 
-  const actionableKeywords = [
-    'increase', 'improve', 'add', 'reduce', 'optimize', 'opportunity', 'recommend', 'should', 'suggest', 'consider', 'enhance', 'expand', 'create', 'develop', 'implement', 'focus', 'grow', 'boost', 'leverage', 'prioritize', 'address', 'achieve', 'drive', 'generate', 'launch', 'build', 'strengthen', 'clarify', 'highlight', 'maximize', 'minimize', 'update', 'test', 'experiment', 'measure', 'track', 'analyze', 'remove', 'fix', 'avoid', 'prevent'
-  ];
-
-  const extractOrSummarize = (content: string): string[] => {
-    // Remove markdown and asterisks, split into sentences
-    const sentences = clean(content)
+    // Split content into sentences and clean them
+    const sentences = content
+      .replace(/\*\*/g, '') // Remove bold markdown
+      .replace(/`/g, '') // Remove code backticks
+      .replace(/_/g, '') // Remove italic markdown
       .split(/[.!?\n\r]+/)
       .map(s => s.trim())
-      .filter(s => s && !/^[-•*#]/.test(s) && s.length > 8 && !/^key (value|insight|recommendation|opportunit)/i.test(s));
+      .filter(s => s.length > 10 && !s.match(/^[-•*#]/)) // Filter out short sentences and list markers
+      .map(s => {
+        // Clean up sentence starts
+        s = s.replace(/^[^a-zA-Z]*/, ''); // Remove non-letter starts
+        s = s.replace(/^(Key|Main|Primary|Important)\s+/i, ''); // Remove filler words
+        return s.charAt(0).toUpperCase() + s.slice(1); // Capitalize first letter
+      })
+      .filter(s => s.length > 5);
 
-    // Prefer actionable sentences
-    let summary = sentences.filter(s => actionableKeywords.some(k => s.toLowerCase().includes(k)));
-    // If not enough, add other non-title sentences
-    if (summary.length < 3) {
-      const more = sentences.filter(s => !summary.includes(s));
-      summary = summary.concat(more);
+    // Look for numbered lists or bullet points first
+    const numberedItems = content.match(/^\d+\.\s*(.+?)(?=\n\d+\.|\n\n|$)/gm);
+    if (numberedItems && numberedItems.length >= maxPoints) {
+      return numberedItems
+        .slice(0, maxPoints)
+        .map(item => item.replace(/^\d+\.\s*/, '').replace(/\*\*/g, '').trim())
+        .map(item => item.charAt(0).toUpperCase() + item.slice(1));
     }
-    // Ensure exactly 3 items
-    while (summary.length < 3) summary.push('No additional insight');
-    return summary.slice(0, 3);
+
+    // Look for bullet points
+    const bulletItems = content.match(/^[-•*]\s*(.+?)(?=\n[-•*]|\n\n|$)/gm);
+    if (bulletItems && bulletItems.length >= maxPoints) {
+      return bulletItems
+        .slice(0, maxPoints)
+        .map(item => item.replace(/^[-•*]\s*/, '').replace(/\*\*/g, '').trim())
+        .map(item => item.charAt(0).toUpperCase() + item.slice(1));
+    }
+
+    // Fallback to sentences
+    if (sentences.length >= maxPoints) {
+      return sentences.slice(0, maxPoints);
+    }
+
+    // If we don't have enough, pad with fallback text
+    const result = [...sentences];
+    while (result.length < maxPoints) {
+      result.push('Additional analysis needed');
+    }
+
+    return result.slice(0, maxPoints);
   };
 
-  // Marketing Opportunities
-  let opportunities: string[] = extractOrSummarize(analysis.marketingOpportunities.content);
-  if (analysis.marketingOpportunities.subsections) {
-    for (const sub of analysis.marketingOpportunities.subsections) {
-      const subBullets = extractOrSummarize(sub.content);
-      opportunities = opportunities.concat(subBullets).slice(0, 3);
-      if (opportunities.length >= 3) break;
+  // Extract market opportunities
+  let opportunities: string[] = [];
+  
+  // First try the main marketing opportunities content
+  opportunities = extractBulletPoints(analysis.marketingOpportunities.content, 3);
+  
+  // If we didn't get good results, try subsections
+  if (opportunities.every(o => o === 'Additional analysis needed' || o === 'No insights available')) {
+    if (analysis.marketingOpportunities.subsections) {
+      const allSubContent = analysis.marketingOpportunities.subsections
+        .map(sub => sub.content)
+        .join('\n\n');
+      opportunities = extractBulletPoints(allSubContent, 3);
     }
   }
 
-  // Actionable Recommendations
-  let recommendations: string[] = extractOrSummarize(analysis.actionableRecommendations.content);
-  if (analysis.actionableRecommendations.subsections) {
-    for (const sub of analysis.actionableRecommendations.subsections) {
-      const subBullets = extractOrSummarize(sub.content);
-      recommendations = recommendations.concat(subBullets).slice(0, 3);
-      if (recommendations.length >= 3) break;
+  // Extract actionable recommendations
+  let recommendations: string[] = [];
+  
+  // First try the main actionable recommendations content
+  recommendations = extractBulletPoints(analysis.actionableRecommendations.content, 3);
+  
+  // If we didn't get good results, try subsections
+  if (recommendations.every(r => r === 'Additional analysis needed' || r === 'No insights available')) {
+    if (analysis.actionableRecommendations.subsections) {
+      const allSubContent = analysis.actionableRecommendations.subsections
+        .map(sub => sub.content)
+        .join('\n\n');
+      recommendations = extractBulletPoints(allSubContent, 3);
     }
+  }
+
+  // Final fallback - try to extract from other sections if needed
+  if (opportunities.every(o => o === 'Additional analysis needed' || o === 'No insights available')) {
+    // Try content messaging section for opportunities
+    opportunities = extractBulletPoints(analysis.contentMessaging.content, 3);
+  }
+
+  if (recommendations.every(r => r === 'Additional analysis needed' || r === 'No insights available')) {
+    // Try competitive positioning for recommendations
+    recommendations = extractBulletPoints(analysis.competitivePositioning.content, 3);
   }
 
   return { opportunities, recommendations };
