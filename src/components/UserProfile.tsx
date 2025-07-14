@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
@@ -33,6 +34,7 @@ import {
   AlertTriangle,
   LogOut,
 } from 'lucide-react';
+import SubscriptionSection from './SubscriptionSection';
 
 interface Profile {
   id: string;
@@ -55,245 +57,6 @@ interface Profile {
   updated_at: string;
   website_analysis: any;
 }
-
-interface SubscriptionSectionProps {
-  profile: Profile | null;
-  onUpdate: () => void;
-}
-
-const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ profile, onUpdate }) => {
-  const [isUpdating, setIsUpdating] = useState(false);
-  const { toast } = useToast();
-
-  const handleStartTrial = async () => {
-    try {
-      setIsUpdating(true);
-      const trialEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          is_premium: true,
-          subscription_status: 'trial',
-          subscription_id: 'trial_7_days',
-          trial_ends_at: trialEndDate.toISOString(),
-          subscription_ends_at: null,
-        })
-        .eq('user_id', profile?.user_id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Free Trial Started! 🎉",
-        description: "You now have 7 days of premium access!",
-      });
-
-      onUpdate();
-    } catch (error) {
-      console.error('Error starting trial:', error);
-      toast({
-        title: "Error",
-        description: "Failed to start trial.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleUpgrade = async (planType: 'basic' | 'pro') => {
-    try {
-      setIsUpdating(true);
-      const subscriptionId = planType === 'basic' ? 'basic_monthly' : 'pro_monthly';
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          is_premium: true,
-          subscription_status: 'active',
-          subscription_id: subscriptionId,
-          trial_ends_at: null,
-          subscription_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        })
-        .eq('user_id', profile?.user_id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Upgraded to " + (planType === 'basic' ? 'Basic' : 'Pro') + " plan successfully!",
-      });
-
-      onUpdate();
-    } catch (error) {
-      console.error('Error upgrading subscription:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upgrade subscription.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleDowngrade = async () => {
-    try {
-      setIsUpdating(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          is_premium: false,
-          subscription_status: 'inactive',
-          subscription_id: null,
-          trial_ends_at: null,
-          subscription_ends_at: null,
-        })
-        .eq('user_id', profile?.user_id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Subscription downgraded successfully!",
-      });
-
-      onUpdate();
-    } catch (error) {
-      console.error('Error downgrading subscription:', error);
-      toast({
-        title: "Error",
-        description: "Failed to downgrade subscription.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  if (!profile) return null;
-
-  const isOnTrial = profile.subscription_status === 'trial';
-  const trialEndsAt = profile.trial_ends_at ? new Date(profile.trial_ends_at) : null;
-  const daysLeft = trialEndsAt ? Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
-
-  return (
-    <div>
-      {profile.is_premium ? (
-        <div className="space-y-4">
-          {isOnTrial ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                <span className="font-semibold text-orange-600">Free Trial Active</span>
-              </div>
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                <p className="text-sm font-medium text-orange-800">
-                  {daysLeft > 0 ? `${daysLeft} days left` : 'Trial expired'}
-                </p>
-                <p className="text-xs text-orange-600 mt-1">
-                  Upgrade now to continue premium access
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Button 
-                  size="sm" 
-                  className="w-full bg-blue-600 hover:bg-blue-700" 
-                  onClick={() => handleUpgrade('basic')}
-                  disabled={isUpdating}
-                >
-                  Upgrade to Basic - $8/month
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="w-full bg-purple-600 hover:bg-purple-700" 
-                  onClick={() => handleUpgrade('pro')}
-                  disabled={isUpdating}
-                >
-                  Upgrade to Pro - $18/month
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span className="font-semibold">Premium Active</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                Plan: {profile.subscription_id?.includes('basic') ? 'Basic ($8/month)' : 'Pro ($18/month)'}
-              </p>
-              <p className="text-sm text-gray-600">
-                Next billing: {profile.subscription_ends_at ? new Date(profile.subscription_ends_at).toLocaleDateString() : 'N/A'}
-              </p>
-              <Button variant="outline" size="sm" className="w-full" onClick={handleDowngrade} disabled={isUpdating}>
-                {isUpdating ? 'Processing...' : 'Downgrade to Free'}
-              </Button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="text-center">
-            <Crown className="h-8 w-8 mx-auto text-purple-500 mb-2" />
-            <h4 className="font-semibold">Try Premium Free</h4>
-            <p className="text-sm text-gray-600 mb-4">
-              Start your 7-day free trial today!
-            </p>
-          </div>
-          
-          <Button 
-            className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 font-bold" 
-            onClick={handleStartTrial}
-            disabled={isUpdating}
-          >
-            {isUpdating ? 'Starting...' : 'Start 7-Day Free Trial'}
-          </Button>
-          
-          <div className="text-center text-sm text-gray-500">
-            Or choose a plan:
-          </div>
-          
-          <div className="space-y-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full" 
-              onClick={() => handleUpgrade('basic')}
-              disabled={isUpdating}
-            >
-              Basic Plan - $8/month
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full" 
-              onClick={() => handleUpgrade('pro')}
-              disabled={isUpdating}
-            >
-              Pro Plan - $18/month
-            </Button>
-          </div>
-          
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span>AI Content Generator</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span>Advanced Analytics</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span>Priority Support</span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 interface PasswordChangeSectionProps {
 }
@@ -337,7 +100,6 @@ const PasswordChangeSection: React.FC<PasswordChangeSectionProps> = () => {
         description: "Password changed successfully!",
       });
 
-      // Clear form
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -356,39 +118,42 @@ const PasswordChangeSection: React.FC<PasswordChangeSectionProps> = () => {
   return (
     <div className="space-y-4">
       <div>
-        <Label htmlFor="oldPassword">Current Password</Label>
+        <Label htmlFor="oldPassword" className="font-black uppercase tracking-wide">Current Password</Label>
         <Input
           id="oldPassword"
           type="password"
           value={oldPassword}
           onChange={(e) => setOldPassword(e.target.value)}
           placeholder="Enter your current password"
+          className="border-4 border-foreground shadow-brutal-small"
         />
       </div>
       <div>
-        <Label htmlFor="newPassword">New Password</Label>
+        <Label htmlFor="newPassword" className="font-black uppercase tracking-wide">New Password</Label>
         <Input
           id="newPassword"
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           placeholder="Enter your new password"
+          className="border-4 border-foreground shadow-brutal-small"
         />
       </div>
       <div>
-        <Label htmlFor="confirmPassword">Confirm New Password</Label>
+        <Label htmlFor="confirmPassword" className="font-black uppercase tracking-wide">Confirm New Password</Label>
         <Input
           id="confirmPassword"
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="Confirm your new password"
+          className="border-4 border-foreground shadow-brutal-small"
         />
       </div>
       <Button 
         onClick={handlePasswordChange} 
         disabled={isUpdating || !newPassword || !confirmPassword}
-        className="w-full"
+        className="w-full font-black border-4 border-foreground shadow-brutal hover:shadow-brutal-hover uppercase tracking-wide"
       >
         {isUpdating ? 'Updating...' : 'Change Password'}
       </Button>
@@ -409,7 +174,6 @@ const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Delete profile data
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -417,7 +181,6 @@ const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = () => {
 
       if (profileError) throw profileError;
 
-      // Sign out the user
       await supabase.auth.signOut();
 
       toast({
@@ -439,20 +202,20 @@ const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="destructive" size="sm">
+        <Button variant="destructive" size="sm" className="font-black uppercase tracking-wide">
           Delete Account
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogTitle>Delete Account</DialogTitle>
-        <DialogDescription>
+      <DialogContent className="border-4 border-foreground shadow-brutal">
+        <DialogTitle className="font-black uppercase tracking-wide">Delete Account</DialogTitle>
+        <DialogDescription className="font-bold">
           Are you sure you want to delete your account? This action is irreversible.
         </DialogDescription>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
+          <Button variant="outline" onClick={() => setIsOpen(false)} className="font-black uppercase tracking-wide border-2 border-foreground">
             Cancel
           </Button>
-          <Button variant="destructive" onClick={handleDeleteAccount}>
+          <Button variant="destructive" onClick={handleDeleteAccount} className="font-black uppercase tracking-wide">
             Delete Account
           </Button>
         </DialogFooter>
@@ -469,7 +232,6 @@ export default function UserProfile() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Form states
   const [productName, setProductName] = useState('');
   const [email, setEmail] = useState('');
   const [goal, setGoal] = useState('');
@@ -562,104 +324,98 @@ export default function UserProfile() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="min-h-screen bg-background p-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading profile...</p>
+            <div className="w-12 h-12 border-4 border-foreground border-t-transparent animate-spin mx-auto"></div>
+            <p className="mt-4 font-bold text-muted-foreground uppercase tracking-wide">Loading profile...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long'
-  }) : 'Unknown';
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/dashboard')}
-            className="mb-4"
+            className="mb-4 font-black uppercase tracking-wide"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
           
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-indigo-600 rounded-full">
-              <User className="h-6 w-6 text-white" />
+            <div className="p-3 bg-primary border-4 border-foreground shadow-brutal-small">
+              <User className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
-              <p className="text-gray-600">Manage your account and subscription</p>
+              <h1 className="text-3xl font-black text-foreground uppercase tracking-tight">Profile Settings</h1>
+              <p className="font-bold text-muted-foreground uppercase tracking-wide">Manage your account and subscription</p>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile Information */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Basic Info */}
-            <Card className="border-2 border-black">
+            <Card className="border-4 border-foreground shadow-brutal">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 font-black uppercase tracking-wide">
                   <Settings className="h-5 w-5" />
                   Profile Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="productName">Product/Business Name</Label>
+                  <Label htmlFor="productName" className="font-black uppercase tracking-wide">Product/Business Name</Label>
                   <Input
                     id="productName"
                     value={productName}
                     onChange={(e) => setProductName(e.target.value)}
                     placeholder="Enter your product or business name"
+                    className="border-4 border-foreground shadow-brutal-small"
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="email" className="font-black uppercase tracking-wide">Email Address</Label>
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email address"
+                    className="border-4 border-foreground shadow-brutal-small"
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="goal">Marketing Goal</Label>
+                  <Label htmlFor="goal" className="font-black uppercase tracking-wide">Marketing Goal</Label>
                   <Input
                     id="goal"
                     value={goal}
                     onChange={(e) => setGoal(e.target.value)}
                     placeholder="What's your main marketing goal?"
+                    className="border-4 border-foreground shadow-brutal-small"
                   />
                 </div>
                 
                 <Button 
                   onClick={updateProfile} 
                   disabled={isUpdating}
-                  className="w-full"
+                  className="w-full font-black border-4 border-foreground shadow-brutal hover:shadow-brutal-hover uppercase tracking-wide"
                 >
                   {isUpdating ? 'Updating...' : 'Update Profile'}
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Password Change */}
-            <Card className="border-2 border-black">
+            <Card className="border-4 border-foreground shadow-brutal">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 font-black uppercase tracking-wide">
                   <Shield className="h-5 w-5" />
                   Security
                 </CardTitle>
@@ -669,10 +425,9 @@ export default function UserProfile() {
               </CardContent>
             </Card>
 
-            {/* Danger Zone */}
-            <Card className="border-2 border-red-500">
+            <Card className="border-4 border-destructive shadow-brutal">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-600">
+                <CardTitle className="flex items-center gap-2 text-destructive font-black uppercase tracking-wide">
                   <AlertTriangle className="h-5 w-5" />
                   Danger Zone
                 </CardTitle>
@@ -680,21 +435,21 @@ export default function UserProfile() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="font-medium">Sign Out</h3>
-                    <p className="text-sm text-gray-600">Sign out of your account</p>
+                    <h3 className="font-black uppercase tracking-wide">Sign Out</h3>
+                    <p className="text-sm font-bold text-muted-foreground uppercase">Sign out of your account</p>
                   </div>
-                  <Button variant="outline" onClick={handleSignOut}>
+                  <Button variant="outline" onClick={handleSignOut} className="font-black uppercase tracking-wide border-2 border-foreground">
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
                   </Button>
                 </div>
                 
-                <Separator />
+                <Separator className="border-2 border-muted" />
                 
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="font-medium text-red-600">Delete Account</h3>
-                    <p className="text-sm text-gray-600">Permanently delete your account and all data</p>
+                    <h3 className="font-black text-destructive uppercase tracking-wide">Delete Account</h3>
+                    <p className="text-sm font-bold text-muted-foreground uppercase">Permanently delete your account and all data</p>
                   </div>
                   <DeleteAccountDialog />
                 </div>
@@ -702,12 +457,10 @@ export default function UserProfile() {
             </Card>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Subscription Status */}
-            <Card className="border-2 border-black">
+            <Card className="border-4 border-foreground shadow-brutal">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 font-black uppercase tracking-wide">
                   <CreditCard className="h-5 w-5" />
                   Subscription
                 </CardTitle>

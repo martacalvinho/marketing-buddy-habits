@@ -391,44 +391,44 @@ const Index = () => {
       {/* Pricing Section */}
       <section id="pricing" className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Start Your Marketing Journey Today
+          <h2 className="text-3xl md:text-4xl font-black mb-4 uppercase tracking-tight">
+            Simple Pricing
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Try premium features free for 7 days, then choose your plan
+          <p className="text-xl font-bold text-muted-foreground max-w-2xl mx-auto uppercase tracking-wide">
+            Choose your plan and start building habits
           </p>
-          <div className="mt-6 inline-flex items-center gap-2 bg-green-100 border-2 border-green-500 px-4 py-2 rounded-lg">
-            <Star className="w-5 h-5 text-green-600" />
-            <span className="font-bold text-green-800">7-Day Free Trial • No Credit Card Required</span>
+          <div className="mt-6 inline-flex items-center gap-2 bg-success/10 border-2 border-success px-4 py-2 border-foreground shadow-brutal-small">
+            <Star className="w-5 h-5 text-success" />
+            <span className="font-black text-success uppercase tracking-wide">7-Day Free Trial • No Credit Card</span>
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {PRICING_PLANS.map((plan, index) => (
-            <Card key={index} className={`bg-gradient-card border-2 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 relative ${plan.popular ? 'scale-105 border-purple-500' : ''}`}>
+            <Card key={index} className={`bg-background border-4 border-foreground shadow-brutal hover:shadow-brutal-hover transition-all duration-300 relative ${plan.popular ? 'scale-105' : ''}`}>
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-purple-500 text-white px-4 py-2 border-2 border-foreground shadow-brutal-small text-sm font-bold uppercase tracking-wide">
+                  <div className="bg-primary text-primary-foreground px-4 py-2 border-2 border-foreground shadow-brutal-small text-sm font-black uppercase tracking-wide">
                     🚀 Most Popular
                   </div>
                 </div>
               )}
               <CardHeader className="text-center">
                 <div className="mb-2">
-                  <span className="inline-block bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded border border-green-300">
+                  <span className="inline-block bg-success/10 text-success border-2 border-success text-xs font-black px-3 py-1 uppercase tracking-wide">
                     {plan.trial}
                   </span>
                 </div>
-                <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+                <CardTitle className="text-2xl font-black uppercase">{plan.name}</CardTitle>
                 <div className="flex items-baseline justify-center gap-2 mt-4">
                   {plan.originalPrice && (
-                    <span className="text-lg text-muted-foreground line-through">{plan.originalPrice}</span>
+                    <span className="text-lg text-muted-foreground line-through font-bold">{plan.originalPrice}</span>
                   )}
-                  <span className="text-4xl font-bold text-purple-600">{plan.price}</span>
-                  <span className="text-muted-foreground">/{plan.period}</span>
+                  <span className="text-4xl font-black">{plan.price}</span>
+                  <span className="text-muted-foreground font-bold uppercase">/{plan.period}</span>
                 </div>
                 {plan.originalPrice && (
-                  <div className="text-sm text-green-600 font-semibold mt-1">
+                  <div className="text-sm text-success font-black mt-1 uppercase tracking-wide">
                     Save 50% - Limited Time!
                   </div>
                 )}
@@ -437,20 +437,22 @@ const Index = () => {
                 <ul className="space-y-3">
                   {plan.features.map((feature, featureIndex) => (
                     <li key={featureIndex} className="flex items-center gap-3">
-                      <Check className="w-5 h-5 text-success flex-shrink-0" />
-                      <span className="text-sm font-medium">{feature}</span>
+                      <div className="w-5 h-5 bg-success border-2 border-foreground flex items-center justify-center">
+                        <Check className="w-3 h-3 text-background" />
+                      </div>
+                      <span className="text-sm font-bold">{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <div className="pt-4">
                   <Button 
-                    className={`w-full font-bold text-lg py-6 ${plan.popular ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600' : 'bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600'}`}
+                    className="w-full font-black text-lg py-6 border-4 border-foreground shadow-brutal hover:shadow-brutal-hover uppercase tracking-wide bg-gradient-primary"
                     size="lg"
                     asChild
                   >
                     <a href="/auth">Start Free Trial</a>
                   </Button>
-                  <p className="text-xs text-center text-muted-foreground mt-2">
+                  <p className="text-xs text-center text-muted-foreground mt-2 font-bold uppercase tracking-wide">
                     Cancel anytime • No commitment
                   </p>
                 </div>
