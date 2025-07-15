@@ -99,14 +99,12 @@ const Onboarding = () => {
         
         const { data: strategyData, error: strategyError } = await supabase.functions.invoke('generate-strategy', {
           body: { 
-            strategyId: selectedStrategy,
-            strategyName: selectedStrategyData?.name || 'Content Strategy',
-            strategyDescription: selectedStrategyData?.description || '',
-            websiteAnalysis: websiteAnalysis,
-            isOnboarding: true,
+            analysis: websiteAnalysis,
+            userGoal: goal,
+            productType: productType,
             platforms: platforms,
-            productName: productName,
-            goal: goal
+            selectedStrategy: selectedStrategyData,
+            isOnboarding: true
           }
         });
 
