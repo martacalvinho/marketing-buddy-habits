@@ -1,4 +1,5 @@
 
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -18,8 +19,10 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== GENERATE STRATEGY FUNCTION START ===');
+    
     const requestBody = await req.json();
-    console.log('Received request body:', JSON.stringify(requestBody, null, 2));
+    console.log('Raw request body:', JSON.stringify(requestBody, null, 2));
 
     const { 
       analysis, 
@@ -31,23 +34,48 @@ serve(async (req) => {
       isOnboarding 
     } = requestBody;
 
-    console.log('Extracted data:', {
+    console.log('Extracted parameters:', {
       hasAnalysis: !!analysis,
       userGoal,
       productType,
       platforms,
-      selectedStrategy,
-      isOnboarding
+      selectedStrategy: selectedStrategy ? JSON.stringify(selectedStrategy) : 'none',
+      isOnboarding,
+      websiteAnalysisId
     });
 
-    if (!analysis || !userGoal) {
-      console.error('Missing required fields:', { hasAnalysis: !!analysis, hasUserGoal: !!userGoal });
-      throw new Error('Analysis and user goal are required');
+    // Validate required fields
+    if (!analysis) {
+      console.error('Missing analysis field');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Analysis is required' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!userGoal) {
+      console.error('Missing userGoal field');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'User goal is required' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (!openrouterApiKey) {
       console.error('OpenRouter API key not configured');
-      throw new Error('OpenRouter API key not configured');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'OpenRouter API key not configured' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Initialize Supabase client to get analysis_sections if websiteAnalysisId is provided
@@ -56,23 +84,34 @@ serve(async (req) => {
     
     if (websiteAnalysisId) {
       console.log('Fetching analysis sections for website analysis ID:', websiteAnalysisId);
-      const { data: sections, error: sectionsError } = await supabase
-        .from('analysis_sections')
-        .select('section_title, section_content, section_type')
-        .eq('analysis_id', websiteAnalysisId);
+      try {
+        const { data: sections, error: sectionsError } = await supabase
+          .from('analysis_sections')
+          .select('section_title, section_content, section_type')
+          .eq('analysis_id', websiteAnalysisId);
 
-      if (sectionsError) {
-        console.error('Error fetching analysis sections:', sectionsError);
-      } else if (sections && sections.length > 0) {
-        analysisSections = sections.map(section => 
-          `## ${section.section_title} (${section.section_type})\n${section.section_content}`
-        ).join('\n\n');
-        console.log('Found analysis sections:', sections.length);
+        if (sectionsError) {
+          console.error('Error fetching analysis sections:', sectionsError);
+        } else if (sections && sections.length > 0) {
+          analysisSections = sections.map(section => 
+            `## ${section.section_title} (${section.section_type})\n${section.section_content}`
+          ).join('\n\n');
+          console.log('Found analysis sections:', sections.length);
+        }
+      } catch (error) {
+        console.error('Exception while fetching analysis sections:', error);
       }
     }
 
     const taskCount = isOnboarding ? 5 : 3;
     const taskContext = isOnboarding ? 'initial onboarding tasks' : 'weekly tasks';
+
+    // Handle selectedStrategy safely
+    const strategyName = selectedStrategy?.name || 'Marketing Strategy';
+    const strategyDescription = selectedStrategy?.description || 'Comprehensive marketing approach';
+    const strategyCategory = selectedStrategy?.category || 'Multi-channel';
+
+    console.log('Strategy details:', { strategyName, strategyDescription, strategyCategory });
 
     const strategyPrompt = `You are an expert marketing strategist. Based on this comprehensive website analysis, create a personalized marketing strategy with exactly ${taskCount} specific ${taskContext}.
 
@@ -86,9 +125,9 @@ ${analysisSections}
 
 === USER CONTEXT ===
 User Goal: ${userGoal}
-Product Type: ${productType}
+Product Type: ${productType || 'Not specified'}
 Active Platforms: ${platforms?.join(', ') || 'Not specified'}
-${selectedStrategy ? `Selected Strategy: ${selectedStrategy.name} - ${selectedStrategy.description} (Category: ${selectedStrategy.category})` : ''}
+${selectedStrategy ? `Selected Strategy: ${strategyName} - ${strategyDescription} (Category: ${strategyCategory})` : ''}
 
 === CRITICAL INSTRUCTIONS ===
 You MUST analyze the website content above and extract key insights about:
@@ -99,9 +138,9 @@ You MUST analyze the website content above and extract key insights about:
 - Competitive positioning and unique value proposition
 
 ${selectedStrategy ? `
-🎯 STRATEGY FOCUS: ALL tasks must directly align with and advance the "${selectedStrategy.name}" strategy.
-Strategy Description: "${selectedStrategy.description}"
-Strategy Category: ${selectedStrategy.category}
+🎯 STRATEGY FOCUS: ALL tasks must directly align with and advance the "${strategyName}" strategy.
+Strategy Description: "${strategyDescription}"
+Strategy Category: ${strategyCategory}
 
 Every task must specifically support this chosen marketing strategy and reference how it advances the strategy goals.
 ` : ''}
@@ -111,17 +150,17 @@ Then create a JSON response with EXACTLY ${taskCount} highly specific, actionabl
 {
   "strategies": [
     {
-      "name": "${selectedStrategy?.name || 'Marketing Strategy'}",
-      "description": "${selectedStrategy?.description || 'Comprehensive marketing approach'}",
-      "channel": "${selectedStrategy?.category || 'Multi-channel'}",
+      "name": "${strategyName}",
+      "description": "${strategyDescription}",
+      "channel": "${strategyCategory}",
       "priority": "high"
     }
   ],
   "weeklyTasks": [
     {
-      "title": "Specific task title based on the website analysis and ${selectedStrategy?.name || 'marketing strategy'}",
-      "description": "Detailed description referencing specific findings from the analysis and how it supports the ${selectedStrategy?.name || 'chosen strategy'}",
-      "category": "${selectedStrategy?.category || 'Marketing'}",
+      "title": "Specific task title based on the website analysis and ${strategyName}",
+      "description": "Detailed description referencing specific findings from the analysis and how it supports the ${strategyName}",
+      "category": "${strategyCategory}",
       "priority": "high/medium/low",
       "estimatedTime": "30 minutes to 2 hours",
       "aiSuggestion": "Specific actionable advice based on the website's current state and opportunities identified in the analysis"
@@ -133,7 +172,7 @@ Then create a JSON response with EXACTLY ${taskCount} highly specific, actionabl
 - Generate EXACTLY ${taskCount} tasks, no more, no less
 - Make all tasks highly specific to this business based on the actual website analysis content
 - Reference specific findings, opportunities, and recommendations from the analysis above
-- ${selectedStrategy ? `Ensure ALL tasks directly support the "${selectedStrategy.name}" strategy and advance its goals` : 'Focus on the most impactful marketing activities'}
+- ${selectedStrategy ? `Ensure ALL tasks directly support the "${strategyName}" strategy and advance its goals` : 'Focus on the most impactful marketing activities'}
 - Include specific examples, copy suggestions, or implementation details where relevant
 - Use insights from the detailed analysis sections to create targeted, relevant tasks
 - DO NOT use generic marketing advice - everything must be tailored to this specific business and website
@@ -143,19 +182,19 @@ ${isOnboarding ? `
 🎯 ONBOARDING FOCUS: These are the user's first 5 tasks after joining. Make them:
 - Immediately actionable and impactful
 - Directly related to their website's specific opportunities
-- Clearly connected to their chosen "${selectedStrategy?.name || 'marketing'}" strategy
+- Clearly connected to their chosen "${strategyName}" strategy
 - Designed to create quick wins and build momentum
 - Specific enough that they know exactly what to do next
 ` : `
 📅 WEEKLY FOCUS: Create ${taskCount} tasks for consistent weekly progress that:
 - Build on previous work and maintain momentum
 - Are achievable within a week alongside other work
-- Advance the "${selectedStrategy?.name || 'marketing'}" strategy systematically
+- Advance the "${strategyName}" strategy systematically
 `}
 
 Respond with ONLY the JSON object, no additional text.`;
 
-    console.log('Generating tasks with strategy:', selectedStrategy?.name, 'Task count:', taskCount);
+    console.log('Calling OpenRouter API...');
 
     const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -180,15 +219,26 @@ Respond with ONLY the JSON object, no additional text.`;
     if (!aiResponse.ok) {
       const aiResponseText = await aiResponse.text();
       console.error('OpenRouter API error:', aiResponse.status, aiResponseText);
-      throw new Error(`OpenRouter API error: ${aiResponse.status} - ${aiResponseText}`);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: `OpenRouter API error: ${aiResponse.status} - ${aiResponseText}` 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const aiData = await aiResponse.json();
     let strategy;
 
     try {
-      const aiContent = aiData.choices[0].message.content;
+      const aiContent = aiData.choices?.[0]?.message?.content;
+      if (!aiContent) {
+        throw new Error('No content in AI response');
+      }
+      
       console.log('AI Response content length:', aiContent.length);
+      console.log('AI Response preview:', aiContent.substring(0, 200));
       
       strategy = JSON.parse(aiContent);
       
@@ -207,12 +257,12 @@ Respond with ONLY the JSON object, no additional text.`;
       while (strategy.weeklyTasks.length < taskCount) {
         console.log(`Adding fallback task, currently have ${strategy.weeklyTasks.length}/${taskCount}`);
         strategy.weeklyTasks.push({
-          title: `${selectedStrategy?.name || 'Marketing'} task ${strategy.weeklyTasks.length + 1} for your business`,
-          description: `Continue working on your ${selectedStrategy?.name || 'marketing'} strategy based on your website analysis`,
-          category: selectedStrategy?.category || "Marketing",
+          title: `${strategyName} task ${strategy.weeklyTasks.length + 1} for your business`,
+          description: `Continue working on your ${strategyName} strategy based on your website analysis`,
+          category: strategyCategory,
           priority: "medium",
           estimatedTime: "1-2 hours",
-          aiSuggestion: `Focus on implementing ${selectedStrategy?.name || 'marketing'} improvements identified in your website analysis`
+          aiSuggestion: `Focus on implementing ${strategyName} improvements identified in your website analysis`
         });
       }
 
@@ -226,24 +276,25 @@ Respond with ONLY the JSON object, no additional text.`;
       strategy = {
         strategies: [
           {
-            name: selectedStrategy?.name || "Content Marketing",
-            description: selectedStrategy?.description || "Create valuable content for your audience",
-            channel: selectedStrategy?.category || "Content",
+            name: strategyName,
+            description: strategyDescription,
+            channel: strategyCategory,
             priority: "high"
           }
         ],
         weeklyTasks: Array.from({ length: taskCount }, (_, i) => ({
-          title: `${selectedStrategy?.name || 'Marketing'} task ${i + 1} for your business`,
-          description: `Work on ${selectedStrategy?.name || 'marketing'} activities related to your product and goals`,
-          category: selectedStrategy?.category || "Marketing",
+          title: `${strategyName} task ${i + 1} for your business`,
+          description: `Work on ${strategyName} activities related to your product and goals`,
+          category: strategyCategory,
           priority: i < 2 ? "high" : "medium",
           estimatedTime: "1-2 hours",
-          aiSuggestion: `Focus on ${selectedStrategy?.name || 'marketing'} activities that align with your business goals`
+          aiSuggestion: `Focus on ${strategyName} activities that align with your business goals`
         }))
       };
     }
 
     console.log(`Generated ${strategy.weeklyTasks?.length || 0} tasks for ${isOnboarding ? 'onboarding' : 'weekly planning'}`);
+    console.log('=== GENERATE STRATEGY FUNCTION SUCCESS ===');
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -255,13 +306,18 @@ Respond with ONLY the JSON object, no additional text.`;
     });
 
   } catch (error) {
-    console.error('Error in generate-strategy function:', error);
+    console.error('=== GENERATE STRATEGY FUNCTION ERROR ===');
+    console.error('Error details:', error);
+    console.error('Error stack:', error.stack);
+    
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error.message 
+      error: error.message || 'Unknown error occurred',
+      details: error.stack 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
+
