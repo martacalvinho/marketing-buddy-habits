@@ -60,7 +60,7 @@ const Onboarding = () => {
       console.log('Starting onboarding completion for user:', user.id);
       console.log('Profile data:', { productName, productType, goal, platforms, selectedStrategy, websiteUrl });
 
-      // Save profile with onboarding data - don't save selected_strategy_id since it's not a UUID
+      // Save profile with onboarding data
       const profileData = {
         user_id: user.id,
         product_name: productName || null,
@@ -95,7 +95,14 @@ const Onboarding = () => {
       if (selectedStrategy && websiteAnalysis) {
         console.log('Generating strategy with selected strategy ID:', selectedStrategy);
         
+        // Find the full strategy object from the strategies array
         const selectedStrategyData = strategies.find(s => s.id === selectedStrategy);
+        
+        if (!selectedStrategyData) {
+          throw new Error(`Strategy with ID ${selectedStrategy} not found`);
+        }
+
+        console.log('Found strategy data:', selectedStrategyData);
         
         const { data: strategyData, error: strategyError } = await supabase.functions.invoke('generate-strategy', {
           body: { 
