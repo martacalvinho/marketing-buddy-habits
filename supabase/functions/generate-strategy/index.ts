@@ -18,6 +18,9 @@ serve(async (req) => {
   }
 
   try {
+    const requestBody = await req.json();
+    console.log('Received request body:', JSON.stringify(requestBody, null, 2));
+
     const { 
       analysis, 
       userGoal, 
@@ -26,13 +29,24 @@ serve(async (req) => {
       websiteAnalysisId,
       selectedStrategy,
       isOnboarding 
-    } = await req.json();
+    } = requestBody;
+
+    console.log('Extracted data:', {
+      hasAnalysis: !!analysis,
+      userGoal,
+      productType,
+      platforms,
+      selectedStrategy,
+      isOnboarding
+    });
 
     if (!analysis || !userGoal) {
+      console.error('Missing required fields:', { hasAnalysis: !!analysis, hasUserGoal: !!userGoal });
       throw new Error('Analysis and user goal are required');
     }
 
     if (!openrouterApiKey) {
+      console.error('OpenRouter API key not configured');
       throw new Error('OpenRouter API key not configured');
     }
 
@@ -164,7 +178,9 @@ Respond with ONLY the JSON object, no additional text.`;
     });
 
     if (!aiResponse.ok) {
-      throw new Error(`OpenRouter API error: ${aiResponse.status}`);
+      const aiResponseText = await aiResponse.text();
+      console.error('OpenRouter API error:', aiResponse.status, aiResponseText);
+      throw new Error(`OpenRouter API error: ${aiResponse.status} - ${aiResponseText}`);
     }
 
     const aiData = await aiResponse.json();
@@ -204,7 +220,7 @@ Respond with ONLY the JSON object, no additional text.`;
       
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
-      console.error('AI Response:', aiData.choices[0].message.content);
+      console.error('AI Response:', aiData.choices?.[0]?.message?.content || 'No content');
       
       // Create comprehensive fallback strategy
       strategy = {
