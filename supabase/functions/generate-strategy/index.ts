@@ -1,5 +1,4 @@
 
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -21,8 +20,22 @@ serve(async (req) => {
   try {
     console.log('=== GENERATE STRATEGY FUNCTION START ===');
     
-    const requestBody = await req.json();
-    console.log('Raw request body:', JSON.stringify(requestBody, null, 2));
+    // Parse request body with error handling
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('Raw request body received successfully');
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Invalid JSON in request body',
+        details: parseError.message
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const { 
       analysis, 
@@ -36,12 +49,12 @@ serve(async (req) => {
 
     console.log('Extracted parameters:', {
       hasAnalysis: !!analysis,
-      userGoal,
-      productType,
-      platforms,
-      selectedStrategy: selectedStrategy ? JSON.stringify(selectedStrategy) : 'none',
-      isOnboarding,
-      websiteAnalysisId
+      userGoal: userGoal || 'not provided',
+      productType: productType || 'not provided',
+      platforms: platforms || 'not provided',
+      selectedStrategy: selectedStrategy ? 'provided' : 'not provided',
+      isOnboarding: isOnboarding || false,
+      websiteAnalysisId: websiteAnalysisId || 'not provided'
     });
 
     // Validate required fields
@@ -78,7 +91,7 @@ serve(async (req) => {
       });
     }
 
-    // Initialize Supabase client to get analysis_sections if websiteAnalysisId is provided
+    // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
     let analysisSections = '';
     
@@ -106,12 +119,24 @@ serve(async (req) => {
     const taskCount = isOnboarding ? 5 : 3;
     const taskContext = isOnboarding ? 'initial onboarding tasks' : 'weekly tasks';
 
-    // Handle selectedStrategy safely
-    const strategyName = selectedStrategy?.name || 'Marketing Strategy';
-    const strategyDescription = selectedStrategy?.description || 'Comprehensive marketing approach';
-    const strategyCategory = selectedStrategy?.category || 'Multi-channel';
+    // Handle selectedStrategy safely with better error handling
+    let strategyName = 'Marketing Strategy';
+    let strategyDescription = 'Comprehensive marketing approach';
+    let strategyCategory = 'Multi-channel';
 
-    console.log('Strategy details:', { strategyName, strategyDescription, strategyCategory });
+    try {
+      if (selectedStrategy && typeof selectedStrategy === 'object') {
+        strategyName = selectedStrategy.name || strategyName;
+        strategyDescription = selectedStrategy.description || strategyDescription;
+        strategyCategory = selectedStrategy.category || strategyCategory;
+        console.log('Using provided strategy:', { strategyName, strategyDescription, strategyCategory });
+      } else {
+        console.log('No valid strategy provided, using defaults');
+      }
+    } catch (strategyError) {
+      console.error('Error processing selected strategy:', strategyError);
+      console.log('Falling back to default strategy values');
+    }
 
     const strategyPrompt = `You are an expert marketing strategist. Based on this comprehensive website analysis, create a personalized marketing strategy with exactly ${taskCount} specific ${taskContext}.
 
@@ -127,7 +152,7 @@ ${analysisSections}
 User Goal: ${userGoal}
 Product Type: ${productType || 'Not specified'}
 Active Platforms: ${platforms?.join(', ') || 'Not specified'}
-${selectedStrategy ? `Selected Strategy: ${strategyName} - ${strategyDescription} (Category: ${strategyCategory})` : ''}
+Selected Strategy: ${strategyName} - ${strategyDescription} (Category: ${strategyCategory})
 
 === CRITICAL INSTRUCTIONS ===
 You MUST analyze the website content above and extract key insights about:
@@ -137,13 +162,11 @@ You MUST analyze the website content above and extract key insights about:
 - Specific opportunities for improvement based on the analysis
 - Competitive positioning and unique value proposition
 
-${selectedStrategy ? `
 🎯 STRATEGY FOCUS: ALL tasks must directly align with and advance the "${strategyName}" strategy.
 Strategy Description: "${strategyDescription}"
 Strategy Category: ${strategyCategory}
 
 Every task must specifically support this chosen marketing strategy and reference how it advances the strategy goals.
-` : ''}
 
 Then create a JSON response with EXACTLY ${taskCount} highly specific, actionable tasks:
 
@@ -172,7 +195,7 @@ Then create a JSON response with EXACTLY ${taskCount} highly specific, actionabl
 - Generate EXACTLY ${taskCount} tasks, no more, no less
 - Make all tasks highly specific to this business based on the actual website analysis content
 - Reference specific findings, opportunities, and recommendations from the analysis above
-- ${selectedStrategy ? `Ensure ALL tasks directly support the "${strategyName}" strategy and advance its goals` : 'Focus on the most impactful marketing activities'}
+- Ensure ALL tasks directly support the "${strategyName}" strategy and advance its goals
 - Include specific examples, copy suggestions, or implementation details where relevant
 - Use insights from the detailed analysis sections to create targeted, relevant tasks
 - DO NOT use generic marketing advice - everything must be tailored to this specific business and website
@@ -195,44 +218,78 @@ ${isOnboarding ? `
 Respond with ONLY the JSON object, no additional text.`;
 
     console.log('Calling OpenRouter API...');
+    console.log('Strategy prompt length:', strategyPrompt.length);
 
-    const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openrouterApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
-        messages: [
-          { 
-            role: 'system', 
-            content: `You are a marketing strategy expert. Always respond with valid JSON only. You must generate exactly ${taskCount} tasks based on the website analysis and selected strategy.` 
-          },
-          { role: 'user', content: strategyPrompt }
-        ],
-        temperature: 0.4,
-        max_tokens: 2500,
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const aiResponseText = await aiResponse.text();
-      console.error('OpenRouter API error:', aiResponse.status, aiResponseText);
+    let aiResponse;
+    try {
+      aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openrouterApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+          messages: [
+            { 
+              role: 'system', 
+              content: `You are a marketing strategy expert. Always respond with valid JSON only. You must generate exactly ${taskCount} tasks based on the website analysis and selected strategy.` 
+            },
+            { role: 'user', content: strategyPrompt }
+          ],
+          temperature: 0.4,
+          max_tokens: 2500,
+        }),
+      });
+    } catch (fetchError) {
+      console.error('Failed to call OpenRouter API:', fetchError);
       return new Response(JSON.stringify({ 
         success: false, 
-        error: `OpenRouter API error: ${aiResponse.status} - ${aiResponseText}` 
+        error: 'Failed to connect to AI service',
+        details: fetchError.message
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const aiData = await aiResponse.json();
+    if (!aiResponse.ok) {
+      let aiResponseText;
+      try {
+        aiResponseText = await aiResponse.text();
+      } catch (readError) {
+        aiResponseText = 'Could not read error response';
+      }
+      console.error('OpenRouter API error:', aiResponse.status, aiResponseText);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: `OpenRouter API error: ${aiResponse.status}`,
+        details: aiResponseText
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    let aiData;
+    try {
+      aiData = await aiResponse.json();
+    } catch (jsonError) {
+      console.error('Failed to parse AI response JSON:', jsonError);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Invalid JSON response from AI service',
+        details: jsonError.message
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     let strategy;
 
     try {
-      const aiContent = aiData.choices?.[0]?.message?.content;
+      const aiContent = aiData?.choices?.[0]?.message?.content;
       if (!aiContent) {
         throw new Error('No content in AI response');
       }
@@ -240,14 +297,15 @@ Respond with ONLY the JSON object, no additional text.`;
       console.log('AI Response content length:', aiContent.length);
       console.log('AI Response preview:', aiContent.substring(0, 200));
       
+      // Try to parse the JSON content
       strategy = JSON.parse(aiContent);
       
-      // Ensure we have exactly the right number of tasks
+      // Ensure we have the required structure
       if (!strategy.weeklyTasks || !Array.isArray(strategy.weeklyTasks)) {
         throw new Error('AI response missing weeklyTasks array');
       }
       
-      // If we have more tasks than needed, take the first ones
+      // Ensure we have exactly the right number of tasks
       if (strategy.weeklyTasks.length > taskCount) {
         console.log(`AI generated ${strategy.weeklyTasks.length} tasks, trimming to ${taskCount}`);
         strategy.weeklyTasks = strategy.weeklyTasks.slice(0, taskCount);
@@ -266,11 +324,23 @@ Respond with ONLY the JSON object, no additional text.`;
         });
       }
 
+      // Ensure we have strategies array
+      if (!strategy.strategies || !Array.isArray(strategy.strategies)) {
+        strategy.strategies = [
+          {
+            name: strategyName,
+            description: strategyDescription,
+            channel: strategyCategory,
+            priority: "high"
+          }
+        ];
+      }
+
       console.log(`Final task count: ${strategy.weeklyTasks.length}`);
       
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
-      console.error('AI Response:', aiData.choices?.[0]?.message?.content || 'No content');
+      console.error('AI Response:', aiData?.choices?.[0]?.message?.content || 'No content');
       
       // Create comprehensive fallback strategy
       strategy = {
@@ -309,15 +379,17 @@ Respond with ONLY the JSON object, no additional text.`;
     console.error('=== GENERATE STRATEGY FUNCTION ERROR ===');
     console.error('Error details:', error);
     console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
     
     return new Response(JSON.stringify({ 
       success: false, 
       error: error.message || 'Unknown error occurred',
-      details: error.stack 
+      errorType: error.name || 'UnknownError',
+      details: error.stack || 'No stack trace available'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
-
